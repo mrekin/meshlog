@@ -36,6 +36,7 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
 - [ ] Linux executable
   - [ ] Manual build
   - [ ] Autobuilds
+- [ ] Logs custom configurable highlights
 - [ ] Github releases
 ## ToDo (far future)
 - [ ] Use Meshtastic library
