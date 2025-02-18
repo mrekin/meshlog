@@ -1,0 +1,1 @@
+nuitka --onefile --main=../slogApp.py --include-data-files=../css.tcss=./ --standalone --output-dir=nuitka/

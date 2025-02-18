@@ -1,0 +1,7 @@
+*.log
+modules/__pycache__/*
+config/config.yaml
+scripts/nuitka/
+scripts/pyinstaller/
+scripts/slogApp.spec
+.vscode/

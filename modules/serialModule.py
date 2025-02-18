@@ -10,7 +10,7 @@ except (ImportError):
     exit(1)
 
 # Other Imports
-import time
+import time, re
 from signal import signal, SIGINT
 from sys import exit
 from queue import Empty
@@ -34,6 +34,7 @@ class SerialModule(object):
     port = None
     baud = None
     stopLoop = False
+    retry = False
     tgSubs = []
     state = States.Idle
     prevState = States.Idle
@@ -76,6 +77,7 @@ class SerialModule(object):
     def mainLoop(self, prt = None, baud = 115200, retry = False):
         self.setPort(prt, baud)
         self.stopLoop = False
+        self.retry = retry
         res = False
         ## Begin
         ser = None
@@ -99,7 +101,7 @@ class SerialModule(object):
                     ser = Serial(prt,baud,timeout=1)
                 except Exception as e:
                     ser = None
-                    if retry == False:
+                    if self.retry == False:
                         self.log.error(f"Connection error - {e}")
                         break
                     #self.log.info(".")
@@ -113,10 +115,14 @@ class SerialModule(object):
                     self.setState(States.Active)
                     if len(data) > 0:
                         try:
-                            self.log.info(data.decode("utf-8").rstrip())
+                            line = data.decode("utf-8").rstrip()
                         except UnicodeDecodeError as e:
                             hex_data = binascii.hexlify(data)
-                            self.log.info(hex_data)
+                            line = hex_data
+                        clean_text = re.sub(r'\x1b\[([0-9,A-Z]{1,2}(;[0-9]{1,2})?(;[0-9]{3})?)?[m|K]?', '', line)
+                        clean_text = clean_text.replace('\x00', '')
+                        if len(clean_text) > 0:
+                            self.log.info(clean_text)
                 except KeyboardInterrupt as e:
                     self.queue.put(True)
                     self.log.info("Ctrl + C pressed")

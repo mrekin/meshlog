@@ -39,15 +39,25 @@ class SLogger():
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)    
     
-    def addFileHandler(self, filename, maxbytes = 500000):    
+    def addFileHandler(self, filename, maxbytes = 500000, encoding = 'utf-8'):    
         # create file handler which logs even debug messages
-        fh = RotatingFileHandler(filename, maxBytes=maxbytes)
+        fh = RotatingFileHandler(filename, maxBytes=maxbytes, encoding=encoding)
         fh.setLevel(logging.DEBUG)
         # create formatter and add it to the handlers
         formatter = logging.Formatter('%(asctime)s ~  %(message)s')
         fh.setFormatter(formatter)
         # add the handlers to the logger
         self.logger.addHandler(fh)
+        return fh
+    
+    def removeHandler(self, handler):
+        self.getLogger().removeHandler(handler)
+        
+    def removeFileHandlers(self):
+        fhs = self.getLogger().handlers
+        for h in fhs:
+            if isinstance(h, RotatingFileHandler):
+                self.removeHandler(h)
 
     def getLogger(self):
         if not self.logger:

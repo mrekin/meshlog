@@ -1,4 +1,0 @@
-autoReconnect: true
-baudrate: 115200
-logToFile: false
-separatePortLogs: false
