@@ -20,12 +20,12 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
   - [x] `firstEntrance` rule
   - [ ] `searchAfter` param
 - [ ] Make working Settings tab
-  - [ ] UI
-  - [ ] Save/load settings
-  - [ ] Use settings in logic
+  - [ ] UI (usable but ugly now)
+  - [x] Save/load settings (v0.12)
+  - [x] Use settings in logic (v0.12)
 - [ ] Implement logging to file
-  - [ ] Single file
-  - [ ] Separate file for each COM port
+  - [x] Single file (v0.12)
+  - [x] Separate file for each COM port (v0.12)
   - [ ] Separate file for each connection
 - [ ] `Send to` logic for logs and checks/labels
 - [x] Test on Windows system
@@ -37,7 +37,8 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
   - [ ] Manual build
   - [ ] Autobuilds
 - [ ] Logs custom configurable highlights
-- [ ] Github releases
+- [x] Github releases (v0.12)
+- [ ] Readme updates (installation/usage/etc)
 ## ToDo (far future)
 - [ ] Use Meshtastic library
   - [ ] Use not only serial connection, but IP/Bluetooth
