@@ -1,0 +1,78 @@
+Screen {
+    align: center middle;
+}
+
+#main {
+    border: solid $secondary;
+    width: 100%;
+    height: 10fr;
+}
+
+#labelsContainer {
+    width: 100%;
+    border: solid $secondary;
+    height: 1fr;
+}
+.labels {
+    width: 100%;
+    padding: 0;
+    border: solid $secondary;
+}
+
+#leftColumn {
+    padding: 0;
+    border: solid $secondary;
+    width: 1.2fr;
+    height: 99%;
+}
+
+.mui {
+   border: solid $secondary; 
+}
+
+#settings-tab {
+    height: 10fr;
+}
+#settings {
+    padding: 0;
+    border: solid $accent;
+    width: 1fr; 
+    height: 10fr;
+}
+#vlogs {
+    padding: 0;
+    border: solid $accent;
+    width: 10fr; 
+    height: 99%;
+}
+#clogs {
+    padding: 0;
+    border: solid $accent;
+    width: 10fr; 
+    height: 8fr;
+}
+#rclogs {
+    width: 99%; 
+    height: 10fr;
+}
+.label_input {
+    height: 2;
+}
+
+
+Lbl{
+    border: solid $secondary;
+    height: auto;
+    width: auto;
+}
+
+#checks {
+    width: 1fr;
+}
+#taAbout {
+    height: 8fr;
+}
+
+#version {
+    height: 1fr;
+}

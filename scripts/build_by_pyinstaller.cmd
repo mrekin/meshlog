@@ -1,0 +1,1 @@
+pyinstaller --onefile --add-data css.tcss:. --clean --hidden-import=textual.widgets._tab_pane --strip slogApp.py
