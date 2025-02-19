@@ -1,5 +1,3 @@
 text: |
   Some text about tool :)
   Main goal - get serial console with autoreconnect feature
-
-version: 0.1
