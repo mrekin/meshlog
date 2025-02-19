@@ -17,6 +17,10 @@ cd meshlog && source bin/activate
 git clone git clone https://github.com/mrekin/meshlog.git
 cd meshlog
 pip3 install -r requirements.txt
+```
+
+Run
+```
 python3 ./slogApp.py
 ```
 
@@ -55,7 +59,7 @@ python3 ./slogApp.py
 - [ ] Windows executable
   - [x] Manual build
   - [ ] Autobuilds
-- [ ] Test on Linux system
+- [ ] Test on Linux system (partially tested on Ubuntu server 24.04.1 LTS)
 - [ ] Linux executable
   - [ ] Manual build
   - [ ] Autobuilds
