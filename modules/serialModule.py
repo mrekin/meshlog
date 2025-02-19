@@ -2,6 +2,7 @@ try:
     import serial
     from serial import Serial
     import serial.tools.list_ports
+    from serial.tools.list_ports_common import ListPortInfo
 except (ImportError):
     msg = """ERROR: pyserial library not found
     Install pyserial library
@@ -74,14 +75,15 @@ class SerialModule(object):
     def stopLoop(self):
         self.stopLoop = True
         
-    def mainLoop(self, prt = None, baud = 115200, retry = False):
+
+    def mainLoop(self, prt:ListPortInfo = None, baud = 115200, retry = False):
         self.setPort(prt, baud)
         self.stopLoop = False
         self.retry = retry
         res = False
         ## Begin
         ser = None
-        self.log.info(f"> Opening port: {prt}")
+        self.log.info(f"> Opening port: {self.port.name} ({self.port.device})")
         self.setState(States.Idle)
         while not self.stopLoop:
             try:
@@ -97,8 +99,8 @@ class SerialModule(object):
 
             if ser == None:
                 try:
-                    if not prt: raise Exception("No port selected")
-                    ser = Serial(prt,baud,timeout=1)
+                    if not self.port: raise Exception("No port selected")
+                    ser = Serial(self.port.device,baud,timeout=1)
                 except Exception as e:
                     ser = None
                     if self.retry == False:

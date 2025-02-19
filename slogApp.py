@@ -175,7 +175,7 @@ class PortSelector(App[None]):
         try:
             try:
                 rsb = self.query_one(f"#stopRB",RadioButton)
-                rb = self.query_one(f"#{port}",RadioButton)
+                rb = self.query_one(f"#{port.name}",RadioButton)
             except Exception as e:
                 pass
             if state == serialModule.States.Reconnecting:
@@ -216,7 +216,7 @@ class PortSelector(App[None]):
         pass
     
     def updateLogger(self, port = None):
-        if not port: port = self.sm.port if self.sm.state == serialModule.States.Active else None
+        if not port: port = self.sm.port.name if self.sm.state == serialModule.States.Active else None
         cfg = self.config.get('config',default_config)
         fname =constants.LOG_FILENAME
         fprefix = port if port and ('separatePortLogs' in cfg and cfg.get('separatePortLogs', False)) else None
@@ -243,7 +243,7 @@ class PortSelector(App[None]):
                     # Make active port selected
                     if self.sm.state == serialModule.States.Active and self.sm.port:
                         for b in self.portsRB:
-                            if b.id == self.sm.port and b.value == False:
+                            if b.id == self.sm.port.name and b.value == False:
                                 with b.prevent(b.Changed):
                                     b.toggle()   
                     await pl.mount_all(self.portsRB)
@@ -281,9 +281,9 @@ class PortSelector(App[None]):
             rsbState = self.query_one("#stopRB").value
         except Exception as e: pass
         if self.ports:
-            arr =[RadioButton(t,tooltip=self.ports[i].description, id=t) for i, t in enumerate(self.ps)]
+            arr =[RadioButton(t,tooltip=self.ports[i].description, id=self.ports[i].name) for i, t in enumerate(self.ps)]
         if self.sm.port and self.sm.port not in [p.device for p in self.ports] and self.sm.state == serialModule.States.Reconnecting:
-            recB = RadioButton(self.sm.port,tooltip=self.sm.port, id =self.sm.port)
+            recB = RadioButton(self.sm.port.name,tooltip=self.sm.port.description, id =self.sm.port.name)
             arr.append(recB)
         stop = RadioButton("Stop",tooltip="Stop logging", id ="stopRB", value=rsbState)
         arr.append(stop)
@@ -308,7 +308,7 @@ class PortSelector(App[None]):
                 pass
     
     def runSerial(self, port):
-        self.sm.mainLoop(port.device, int(self.config.get('config').get('baudrate',115200)), bool(self.config.get('config').get('autoReconnect',False)))
+        self.sm.mainLoop(port, int(self.config.get('config').get('baudrate',115200)), bool(self.config.get('config').get('autoReconnect',False)))
             
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
         self.config['config'][event.checkbox.id] = event.checkbox.value
@@ -332,8 +332,15 @@ class PortSelector(App[None]):
 
     
     def setPorts(self, ports: list):
-        self.ps = [f"{port.device}" for port in ports]
+        self.ps = [f"{port.name}" for port in ports]
         self.ports = ports
+    
+    def getPortByName(self, name):
+        for p in self.ports:
+            if p.name == name:
+                return p
+        return None
+        
 
 def readConfig():
     
