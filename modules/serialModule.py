@@ -141,6 +141,7 @@ class SerialModule(object):
 
     def get_available_ports(self):
         ports = list(serial.tools.list_ports.comports())
+        ports = [p for p in ports if p.hwid != 'n/a']
         return ports, self.port 
         
 def get_available_ports():
