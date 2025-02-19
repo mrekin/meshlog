@@ -3,6 +3,11 @@
 ## Why
 I need a tool to simplify meshtastic nodes log analisys. I didn't found anything usefull, so build my own ugly coded logger.
 
+## Possibilities
+* Console UI (using Textual), works in Win console, Linux console, over SSH
+* Auto reconnect to last used serial port
+* Customizible labels (log parsing)
+
 ## Interface
 
 ![v0.11 screen](images/screen.png)
