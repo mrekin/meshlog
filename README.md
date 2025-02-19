@@ -7,6 +7,33 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
 
 ![v0.11 screen](images/screen.png)
 
+## HowTo
+
+### Installation 
+Linux
+```
+python3 -m venv meshlog
+cd meshlog && source bin/activate
+git clone git clone https://github.com/mrekin/meshlog.git
+cd meshlog
+pip3 install -r requirements.txt
+```
+
+Run
+```
+python3 ./slogApp.py
+```
+
+### Build binary
+1. Activate venv
+2. Install nuitka (preffered) or pyinstaller
+   `pip3 install nuitka` or 
+   `pip3 install pyinstaller`
+3. For Linux and nuitka you may need to install
+   `sudo apt install patchhelf`
+4. Run script from corresponding file in scripts/
+
+
 ## ToDo (near future)
 - [x] Autoreconnect to latest COM port
 - [x] Port list autoupdates
@@ -32,7 +59,7 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
 - [ ] Windows executable
   - [x] Manual build
   - [ ] Autobuilds
-- [ ] Test on Linux system
+- [ ] Test on Linux system (partially tested on Ubuntu server 24.04.1 LTS over ssh)
 - [ ] Linux executable
   - [ ] Manual build
   - [ ] Autobuilds
