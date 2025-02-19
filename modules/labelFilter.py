@@ -23,22 +23,21 @@ class LabelFiller(object):
             
             if 'rules' in rule and isFilled == True:
                 for r in rule.get('rules',[]):
-                    if r.get('type','') == 'firstEntrance' and 'dropAfter' not in r:
+                    if r.get('type','') == 'firstEntrance':
                         isSkipRule = True
                     if 'dropAfter' in r:
                         isDropRule = True
-                    
-            if isSkipRule:
-                continue
             
             # dropAfter field contains regexp value for matching drop line
-            # if match - set None to value
+            # if match - set None to value and go to next rule
             if isDropRule:
                 if re.search(r.get('dropAfter',''), string):
                     labels[rule['name']] = None
                     continue
-                
-                
+                    
+            # Skip rule if label is filled
+            if isSkipRule and isFilled:
+                continue                
             
             # Search value
             #If rule has regexp - search match by regexp, if no -search 'value' in string
