@@ -59,7 +59,7 @@ python3 ./slogApp.py
 - [ ] Windows executable
   - [x] Manual build
   - [ ] Autobuilds
-- [ ] Test on Linux system (partially tested on Ubuntu server 24.04.1 LTS)
+- [ ] Test on Linux system (partially tested on Ubuntu server 24.04.1 LTS over ssh)
 - [ ] Linux executable
   - [ ] Manual build
   - [ ] Autobuilds
