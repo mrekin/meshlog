@@ -44,7 +44,8 @@ python3 ./slogApp.py
 - [x] Port list autoupdates
   - [ ] Fix bugs with UI in port list
 - [ ] Custom configurable labels
-  - [ ] Static
+  - [x] Static labels (v0.13)
+  - [x] Avg labels (v0.13)
   - [x] Regexp (groups)
   - [ ] Regexp (match) - is it needed?
   - [x] String/bool result
