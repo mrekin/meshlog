@@ -12,7 +12,7 @@
 #leftColumn {
     padding: 0;
     border: solid $secondary;
-    width: 1.2fr;
+    width: 2fr;
     height: auto; /*99%*/
 }
 

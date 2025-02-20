@@ -15,11 +15,11 @@ import yaml, os, pathlib, time
 from queue import Queue
 from enum import Enum
 from textual import work
-from textual.containers import Container
+from textual.containers import Container, ScrollableContainer
 from rich.highlighter import ReprHighlighter
 import asyncio, re
 
-config_dir = "config"
+
 default_config = {"logToFile": True,
                   "separatePortLogs":False,
                   "autoReconnect": True,
@@ -49,7 +49,7 @@ class PortSelector(App[None]):
     ports =reactive([])
     ps = reactive([])
     portsRB = reactive([])
-    config = reactive({}, always_update=True)
+    config = reactive({}, always_update=True, init=False)
     isFullscreen = False
     logger = None
     sm = None
@@ -58,7 +58,7 @@ class PortSelector(App[None]):
     lastLogName = None
     text = reactive('')
     
-    # Vars for labels filtering
+    # Vars for labels filterings
     ruller = None
     labelsList = reactive({})
     filledLabels = []
@@ -109,7 +109,7 @@ class PortSelector(App[None]):
                             #self.createPortsRB()
                             pl = RadioSet( *self.portsRB, id='portList', name='Ports list')
                             yield pl
-                            yield Container(*[],id="labelsContainer")
+                            yield ScrollableContainer(*[],id="labelsContainer")
 
                         with Vertical(id="vlogs"):
                             self.logUI = RichLog(id='rclogs',highlight=True)
@@ -146,6 +146,8 @@ class PortSelector(App[None]):
         htext.highlight_words(await self.ruller.getKeywords(htext.plain,"`([^`]+)`"), style='green italic')
         self.logUI.write(htext)
         self.sm.stateInfoSubscribe(self.serialPortStateUpdate)
+        # Process static labels
+        self.run_worker(self.labelFilterWrapper(''))
         pass
     
     # Rules is a set of tuples (regexp, style) for highlighting
@@ -216,11 +218,15 @@ class PortSelector(App[None]):
         pass
     
     def updateLogger(self, port = None):
+        if not os.path.exists(constants.LOG_DIR):
+            os.makedirs(constants.LOG_DIR)
         if not port: port = self.sm.port.name if self.sm.state == serialModule.States.Active else None
         cfg = self.config.get('config',default_config)
         fname =constants.LOG_FILENAME
         fprefix = port if port and ('separatePortLogs' in cfg and cfg.get('separatePortLogs', False)) else None
-        currentLogName = f"{fprefix}.{fname}" if fprefix else fname
+        path =pathlib.Path(constants.LOG_DIR, f"{fprefix}.{fname}" if fprefix else fname)
+        #currentLogName = f"{fprefix}.{fname}" if fprefix else fname
+        currentLogName = path.as_posix()
         if self.lastLogName != currentLogName:
             self.logger.removeFileHandlers()
             self.fileHandler = None
@@ -256,15 +262,16 @@ class PortSelector(App[None]):
     # Check if labels changed. If true -sort them. For each label create Static widget and add it to labels container
     async def watch_labelsList(self):
         if self.labelsList:
-            self.query_one("#labelsContainer").remove_children("*")
-            for label in self.labelsList:
-                if label in self.filledLabels:
-                    style = "green"
-                else:
-                    style = "white"
-                lt = await self.hltext(f"{label}: {self.labelsList.get(label)}",("(\w+):",style))
-                lbl = Static(content=lt, classes='labels')
-                await self.query_one("#labelsContainer").mount(lbl)
+            with self.app.batch_update():
+                self.query_one("#labelsContainer").remove_children("*")
+                for label in self.labelsList:
+                    if label in self.filledLabels:
+                        style = "green"
+                    else:
+                        style = "white"
+                    lt = await self.hltext(f"{label}: {self.labelsList.get(label)}",("([^:]+):",style))
+                    lbl = Static(content=lt, classes='labels')
+                    await self.query_one("#labelsContainer").mount(lbl)
 
     def updatePortsTh(self):
         while self.state == States.Active:
@@ -344,14 +351,14 @@ class PortSelector(App[None]):
 
 def readConfig():
     
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
+    if not os.path.exists(constants.CONFIG_DIR):
+        os.makedirs(constants.CONFIG_DIR)
     #Read all yaml files in config folder and return them as common dictionary
 
-    config_files = [f for f in os.listdir(config_dir) if f.endswith('.yaml')]
+    config_files = [f for f in os.listdir(constants.CONFIG_DIR) if f.endswith('.yaml')]
     config_dict = {}
     for file in config_files:
-        with open(os.path.join(config_dir, file), 'r') as stream:
+        with open(os.path.join(constants.CONFIG_DIR, file), 'r') as stream:
             
             config_dict[pathlib.Path(file).stem] = yaml.safe_load(stream)
     default_config.update(config_dict.get('config',{}))
@@ -361,7 +368,7 @@ def readConfig():
 
 
 def writeConfigFile(config_dict, filename):
-    with open(os.path.join(config_dir, f"{filename}.yaml"), 'w') as f:
+    with open(os.path.join(constants.CONFIG_DIR, f"{filename}.yaml"), 'w') as f:
         yaml.dump(config_dict.get(filename), f)
     
 

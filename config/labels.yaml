@@ -43,3 +43,12 @@
   rules: 
       - type: firstEntrance
         dropAfter: (Opening port|Init NodeDB)
+
+- name: Static
+  type: static
+  value: Hello!
+  
+- name: TX avg time
+  type: avg
+  regexp: 'Packet TX: (\d+)ms'
+  maxIterations: 20
