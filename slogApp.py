@@ -186,7 +186,10 @@ class PortSelector(App[None]):
                     rb.toggle()
             elif state == serialModule.States.Active and rb.value == False and rsb.value == False:
                 with rb.prevent(rb.Changed):
-                    rb.toggle()   
+                    rb.toggle()
+            elif state == serialModule.States.Closing and rb.value == True:
+                with rb.prevent(rb.Changed):
+                    rb.toggle()
         except Exception as e:
             pass
         finally:
@@ -245,7 +248,9 @@ class PortSelector(App[None]):
             pl = self.query_one("#portList")
             if pl:
                 with self.app.batch_update():
-                    await pl.remove_children("*")
+                    if len(pl.children)!=0:
+                        await pl.remove_children("*")
+                    asyncio.sleep(2)
                     # Make active port selected
                     if self.sm.state == serialModule.States.Active and self.sm.port:
                         for b in self.portsRB:
@@ -255,6 +260,9 @@ class PortSelector(App[None]):
                     await pl.mount_all(self.portsRB)
         except:
             pass
+        if pl and len(pl.children)==0:
+            pass
+            #await self.watch_ports()    
     
     async def watch_ports(self):
         self.createPortsRB()    
@@ -289,7 +297,7 @@ class PortSelector(App[None]):
         except Exception as e: pass
         if self.ports:
             arr =[RadioButton(t,tooltip=self.ports[i].description, id=self.ports[i].name) for i, t in enumerate(self.ps)]
-        if self.sm.port and self.sm.port not in [p.device for p in self.ports] and self.sm.state == serialModule.States.Reconnecting:
+        if self.sm.port and self.sm.port not in self.ports and self.sm.state == serialModule.States.Reconnecting:
             recB = RadioButton(self.sm.port.name,tooltip=self.sm.port.description, id =self.sm.port.name)
             arr.append(recB)
         stop = RadioButton("Stop",tooltip="Stop logging", id ="stopRB", value=rsbState)
@@ -301,18 +309,25 @@ class PortSelector(App[None]):
     @work(exclusive=True) 
     async def on_radio_button_changed(self, event: RadioButton.Changed) -> None:
         pass
-        
+     
+    mltask = None   
     @work(exclusive=True)
     async def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         self.sm.stopLoop = True
+        while self.mltask and self.mltask._state != 'FINISHED':
+            await asyncio.sleep(0.1)
         if event.pressed.id != 'stopRB':
             try:
                 indx= self.ps.index(event.pressed.label.plain)
                 port = self.ports[indx]
                 self.updateLogger(port = port.device)
-                asyncio.create_task(asyncio.to_thread(self.runSerial,port))
+                # Preventing multiple tasks with serial 
+                if not self.mltask or self.mltask._state == 'FINISHED':
+                    self.mltask = asyncio.create_task(asyncio.to_thread(self.runSerial,port))
             except Exception as e:
                 pass
+        else:
+            pass
     
     def runSerial(self, port):
         self.sm.mainLoop(port, int(self.config.get('config').get('baudrate',115200)), bool(self.config.get('config').get('autoReconnect',False)))

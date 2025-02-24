@@ -17,4 +17,4 @@ LOG_INITIAL_TEXT = '''
 '''
 
 #Ports
-PORTS_RENEWAL_DELAY = 2 #sec
+PORTS_RENEWAL_DELAY = 1 #sec
