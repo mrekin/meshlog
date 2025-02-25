@@ -160,11 +160,19 @@ class PortSelector(App[None]):
                 except Exception as e:
                     pass
         return t
-    
+    '''
+    smState update callback. 
+    TODO time.time added to always update smState, but need to ne changed to always_update property of reactive
+    '''
     smState = reactive(())
     def serialPortStateUpdate(self, state: serialModule.States, prevState : serialModule.States, port, baud):
         self.smState = (state, prevState, port, baud, time.time())
 
+    '''
+    Check serial monitor state changes
+    Do NOT use this method to add/remove UI elements or something similar
+    Some states catches not in 100% cases (like Closing or stopped), so you can miss something
+    '''
     async def watch_smState(self):
         if not self.smState:
             return
@@ -193,18 +201,18 @@ class PortSelector(App[None]):
         except Exception as e:
             pass
         finally:
-            try:
-                #rb.refresh()
-                pass
-            except:
-                pass
-    
+            pass
+
+            
+    # Write callback for logging to UI RichLog and fill labels
     @work(exclusive=True)
     async def write(self,msg):
         #clean_text = await PortSelector.cleanText(msg)
         self.logUI.write(msg)
         self.run_worker(self.labelFilterWrapper(msg))
     
+    # Remove non ANSII chars from text
+    # Not used, moved to serialModule TODO need to remove or do something
     async def cleanText(msg):
         clean_text = re.sub(r'\x1b\[([0-9,A-Z]{1,2}(;[0-9]{1,2})?(;[0-9]{3})?)?[m|K]?', '', msg)
         clean_text = clean_text.replace('\x00', '')
@@ -213,6 +221,7 @@ class PortSelector(App[None]):
     async def labelFilterWrapper(self, string):
         self.filledLabels, self.labelsList  = await self.ruller.labelFilter(string, self.labelsList.copy())
     
+    # Do jobs when config changed
     def watch_config(self):
         #set actual file handlers (logToFile, separatePortLogs)
         self.updateLogger()
@@ -220,6 +229,7 @@ class PortSelector(App[None]):
         self.sm.retry = self.config.get('config',default_config).get('autoReconnect',False)
         pass
     
+    # Add/remove logger handlers when settings changed or other port selected
     def updateLogger(self, port = None):
         if not os.path.exists(constants.LOG_DIR):
             os.makedirs(constants.LOG_DIR)
@@ -241,8 +251,7 @@ class PortSelector(App[None]):
             self.fileHandler = None
             self.lastLogName = None
         
-        
-    
+    # Mount all Radiobuttons when RadioButtons list changed
     async def watch_portsRB(self):
         try:
             pl = self.query_one("#portList")
@@ -250,7 +259,6 @@ class PortSelector(App[None]):
                 with self.app.batch_update():
                     if len(pl.children)!=0:
                         await pl.remove_children("*")
-                    asyncio.sleep(2)
                     # Make active port selected
                     if self.sm.state == serialModule.States.Active and self.sm.port:
                         for b in self.portsRB:
@@ -264,6 +272,7 @@ class PortSelector(App[None]):
             pass
             #await self.watch_ports()    
     
+    # Build Radiobuttons when port list changes
     async def watch_ports(self):
         self.createPortsRB()    
     
@@ -280,7 +289,8 @@ class PortSelector(App[None]):
                     lt = await self.hltext(f"{label}: {self.labelsList.get(label)}",("([^:]+):",style))
                     lbl = Static(content=lt, classes='labels')
                     await self.query_one("#labelsContainer").mount(lbl)
-
+    
+    # Update port list every PORTS_RENEWAL_DELAY sec
     def updatePortsTh(self):
         while self.state == States.Active:
             avports, currentPort = self.sm.get_available_ports()
@@ -289,16 +299,25 @@ class PortSelector(App[None]):
                 self.setPorts(avports)
             time.sleep(constants.PORTS_RENEWAL_DELAY)
     
+    '''
+    Create RadioButtons for available ports
+    Create  additional buttons (Stop and reconnecting button)
+    Reconnecting button is UI element represent  COM port not available in system,
+    but triyng to open by serial (in case port was opened but device disconnected from PC)
+    '''
     def createPortsRB(self):
         arr = []
         rsbState = False
         try:
-            rsbState = self.query_one("#stopRB").value
+            #rsbState = self.query_one("#stopRB").value
+            #Check if last pressed button was stopRB
+            rsbState = True if self.query_one("#portList").pressed_button.id =="stopRB" else False
         except Exception as e: pass
         if self.ports:
             arr =[RadioButton(t,tooltip=self.ports[i].description, id=self.ports[i].name) for i, t in enumerate(self.ps)]
         if self.sm.port and self.sm.port not in self.ports and self.sm.state == serialModule.States.Reconnecting:
             recB = RadioButton(self.sm.port.name,tooltip=self.sm.port.description, id =self.sm.port.name)
+            recB.add_class("fakeRB")
             arr.append(recB)
         stop = RadioButton("Stop",tooltip="Stop logging", id ="stopRB", value=rsbState)
         arr.append(stop)
@@ -314,8 +333,16 @@ class PortSelector(App[None]):
     @work(exclusive=True)
     async def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         self.sm.stopLoop = True
+        # Wait while active serial connection is stopped
+        # We can check  task state or self.sm.state (currently `task`` to avoid several active tasks running)
         while self.mltask and self.mltask._state != 'FINISHED':
             await asyncio.sleep(0.1)
+        
+        # Remove fakeRB (`reconnecting` button) if other radiobutton clicked
+        for rb in event.control.children:
+            if rb.has_class('fakeRB') and rb!= event.pressed:
+                await rb.remove()
+        # Update logger and start serial for selected port
         if event.pressed.id != 'stopRB':
             try:
                 indx= self.ps.index(event.pressed.label.plain)
