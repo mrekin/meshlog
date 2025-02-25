@@ -79,8 +79,8 @@ class LabelFiller(object):
                 case 'avg':
                     if bingo:
                         try:
-                            result = int(result)
-                            labels[rule['name']] = self.avgvars.get(rule.get('name'),0).nextVal(result)
+                            result = float(result)
+                            labels[rule['name']] = self.avgvars.get(rule.get('name'),0).nextVal(result,rule.get('ndigits',0))
                         except:
                             pass
                     
@@ -120,7 +120,9 @@ class avgVar(object):
     def setMaxIterations(self, i):
         self.maxIterations = i
         
-    def nextVal(self, aNext):
+    def nextVal(self, aNext, ndigits =0):
         curI = self.getIterations()
-        self.avg = round(self.avg * (curI / (curI + 1)) + aNext / (curI + 1))
+        self.avg = round(self.avg * (curI / (curI + 1)) + aNext / (curI + 1),ndigits=ndigits)
+        if ndigits == 0:
+            self.avg = int(self.avg)
         return self.avg

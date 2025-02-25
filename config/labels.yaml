@@ -52,3 +52,4 @@
   type: avg
   regexp: 'Packet TX: (\d+)ms'
   maxIterations: 20
+  ndigits: 0
