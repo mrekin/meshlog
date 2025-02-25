@@ -20,10 +20,14 @@ from rich.highlighter import ReprHighlighter
 import asyncio, re
 
 
-default_config = {"logToFile": True,
-                  "separatePortLogs":False,
+default_config = {"Log to file": True,
+                  "Separate port logs":False,
+                  "Separate session logs":False,
                   "autoReconnect": True,
                   "baudrate": 115200}
+def idf(text):
+    text = text.replace(' ','_')
+    return text
 
 class States(Enum):
     Starting = 0
@@ -120,11 +124,11 @@ class PortSelector(App[None]):
                         for key in self.config.get('config',{}).keys():
                             value = self.config.get('config',{}).get(key)
                             if isinstance(value, bool):
-                                yield Checkbox(id = key, label=key,value=value, classes="settings_checkbox settings_element")
+                                yield Checkbox(id = idf(key), label=key,value=value, classes="settings_checkbox settings_element")
                             elif isinstance(value, (int,str)):
                                 with Horizontal(classes="settings_label_input"):
                                         yield Label(f"{key}:", classes="settings_label settings_element")
-                                        inp = Input(value=str(value), id = key, tooltip=key, type="integer", classes="settings_input settings_element")
+                                        inp = Input(value=str(value), id = idf(key), tooltip=key, type="integer", classes="settings_input settings_element")
                                         inp.oldValue = str(value)
                                         yield inp
                                     
@@ -360,10 +364,15 @@ class PortSelector(App[None]):
         self.sm.mainLoop(port, int(self.config.get('config').get('baudrate',115200)), bool(self.config.get('config').get('autoReconnect',False)))
             
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        self.config['config'][event.checkbox.id] = event.checkbox.value
+        key = None
+        for k in self.config['config'].keys():
+            if idf(k) == event.checkbox.id:
+                key = k
+                break
+        self.config['config'][key] = event.checkbox.value
         # Hack for reactive dict https://github.com/Textualize/textual/issues/1098
         self.config = self.config
-        #TODO need to use async io library
+        #TODO need to use async io library (?) or move to watch_config
         writeConfigFile(self.config, "config")
         self.notify(message="Config saved",timeout=1)
 
@@ -403,7 +412,8 @@ def readConfig():
         with open(os.path.join(constants.CONFIG_DIR, file), 'r') as stream:
             
             config_dict[pathlib.Path(file).stem] = yaml.safe_load(stream)
-    default_config.update(config_dict.get('config',{}))
+    if config_dict.get('config',{}) != None:
+        default_config.update(config_dict.get('config',{}))
     config_dict['config'] = default_config
     
     return config_dict
