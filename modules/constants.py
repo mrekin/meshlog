@@ -16,5 +16,12 @@ LOG_INITIAL_TEXT = '''
 \n\n
 '''
 
+# Settings
+CFG_LOG2FILE = 'Log to file'
+CFG_LOGS_BY_PORT = 'Separate port logs'
+CFG_LOGS_BY_SESSION = 'Separate session logs'
+CFG_AUTO_RECONNECT = 'autoReconnect'
+CFG_BAUDRATE = 'baudrate'
+
 #Ports
 PORTS_RENEWAL_DELAY = 1 #sec

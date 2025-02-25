@@ -20,11 +20,11 @@ from rich.highlighter import ReprHighlighter
 import asyncio, re
 
 
-default_config = {"Log to file": True,
-                  "Separate port logs":False,
-                  "Separate session logs":False,
-                  "autoReconnect": True,
-                  "baudrate": 115200}
+default_config = {constants.CFG_LOG2FILE: True,
+                  constants.CFG_LOGS_BY_PORT:False,
+                  constants.CFG_LOGS_BY_SESSION:False,
+                  constants.CFG_AUTO_RECONNECT: True,
+                  constants.CFG_BAUDRATE: 115200}
 def idf(text):
     text = text.replace(' ','_')
     return text
@@ -230,7 +230,7 @@ class PortSelector(App[None]):
         #set actual file handlers (logToFile, separatePortLogs)
         self.updateLogger()
         # Set autoReconnect
-        self.sm.retry = self.config.get('config',default_config).get('autoReconnect',False)
+        self.sm.retry = self.config.get('config',default_config).get(constants.CFG_AUTO_RECONNECT,False)
         pass
     
     # Add/remove logger handlers when settings changed or other port selected
@@ -240,14 +240,17 @@ class PortSelector(App[None]):
         if not port: port = self.sm.port.name if self.sm.state == serialModule.States.Active else None
         cfg = self.config.get('config',default_config)
         fname =constants.LOG_FILENAME
-        fprefix = port if port and ('separatePortLogs' in cfg and cfg.get('separatePortLogs', False)) else None
+        fprefix = port if port and (constants.CFG_LOGS_BY_PORT in cfg and cfg.get(constants.CFG_LOGS_BY_PORT, False)) else None
+        if constants.CFG_LOGS_BY_SESSION in cfg and cfg.get(constants.CFG_LOGS_BY_SESSION, False):
+            formatted_time = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
+            fprefix = f"{fprefix}.{formatted_time}" if fprefix else formatted_time
         path =pathlib.Path(constants.LOG_DIR, f"{fprefix}.{fname}" if fprefix else fname)
         #currentLogName = f"{fprefix}.{fname}" if fprefix else fname
         currentLogName = path.as_posix()
         if self.lastLogName != currentLogName:
             self.logger.removeFileHandlers()
             self.fileHandler = None
-        if 'logToFile' in cfg and cfg.get('logToFile', False):
+        if constants.CFG_LOG2FILE in cfg and cfg.get(constants.CFG_LOG2FILE, False):
                 self.fileHandler = self.logger.addFileHandler(currentLogName, encoding='utf-8')
                 self.lastLogName = currentLogName
         elif self.fileHandler:
@@ -361,7 +364,7 @@ class PortSelector(App[None]):
             pass
     
     def runSerial(self, port):
-        self.sm.mainLoop(port, int(self.config.get('config').get('baudrate',115200)), bool(self.config.get('config').get('autoReconnect',False)))
+        self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE,115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT,False)))
             
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
         key = None
