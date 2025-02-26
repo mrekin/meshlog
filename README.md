@@ -42,7 +42,6 @@ python3 ./slogApp.py
 ## ToDo (near future)
 - [x] Autoreconnect to latest COM port
 - [x] Port list autoupdates
-  - [ ] Fix bugs with UI in port list
 - [ ] Custom configurable labels
   - [x] Static labels (v0.13)
   - [x] Avg labels (v0.13)
@@ -52,17 +51,18 @@ python3 ./slogApp.py
   - [x] `dropAfter` param
   - [x] `firstEntrance` rule
   - [ ] `searchAfter` param
+  - [x] Save labels to file (v0.14)
 - [ ] Make working Settings tab
   - [ ] UI (usable but ugly now)
   - [x] Save/load settings (v0.12)
   - [x] Use settings in logic (v0.12)
-- [ ] Implement logging to file
+- [x] Implement logging to file
   - [x] Single file (v0.12)
   - [x] Separate file for each COM port (v0.12)
-  - [ ] Separate file for each connection
+  - [x] Separate file for each connection (v0.14)
 - [ ] `Send to` logic for logs and checks/labels
 - [x] Test on Windows system
-- [ ] Windows executable
+- [x] Windows executable
   - [x] Manual build
   - [ ] Autobuilds
 - [ ] Test on Linux system (partially tested on Ubuntu server 24.04.1 LTS over ssh)
