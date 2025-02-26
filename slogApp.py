@@ -20,11 +20,11 @@ from rich.highlighter import ReprHighlighter
 import asyncio, re
 
 
-default_config = {constants.CFG_LOG2FILE: True,
-                  constants.CFG_LOGS_BY_PORT:False,
-                  constants.CFG_LOGS_BY_SESSION:False,
-                  constants.CFG_AUTO_RECONNECT: True,
-                  constants.CFG_BAUDRATE: 115200}
+default_config = {constants.CFG_LOG2FILE[1]: True,
+                  constants.CFG_LOGS_BY_PORT[1]:False,
+                  constants.CFG_LOGS_BY_SESSION[1]:False,
+                  constants.CFG_AUTO_RECONNECT[1]: True,
+                  constants.CFG_BAUDRATE[1]: 115200}
 def idf(text):
     text = text.replace(' ','_')
     return text
@@ -138,11 +138,11 @@ class PortSelector(App[None]):
                         for key in self.config.get('config',{}).keys():
                             value = self.config.get('config',{}).get(key)
                             if isinstance(value, bool):
-                                yield Checkbox(id = idf(key), label=key,value=value, classes="settings_checkbox settings_element")
+                                yield Checkbox(id = key, label=constants.get_variable(key)[0],value=value, classes="settings_checkbox settings_element")
                             elif isinstance(value, (int,str)):
                                 with Horizontal(classes="settings_label_input"):
-                                        yield Label(f"{key}:", classes="settings_label settings_element")
-                                        inp = Input(value=str(value), id = idf(key), tooltip=key, type="integer", classes="settings_input settings_element")
+                                        yield Label(f"{constants.get_variable(key)[0]}:", classes="settings_label settings_element")
+                                        inp = Input(value=str(value), id = key, tooltip=key, type="integer", classes="settings_input settings_element")
                                         inp.oldValue = str(value)
                                         yield inp
                                     
@@ -249,7 +249,7 @@ class PortSelector(App[None]):
         #set actual file handlers (logToFile, separatePortLogs)
         self.updateLogger()
         # Set autoReconnect
-        self.sm.retry = self.config.get('config',default_config).get(constants.CFG_AUTO_RECONNECT,False)
+        self.sm.retry = self.config.get('config',default_config).get(constants.CFG_AUTO_RECONNECT[1],False)
         pass
     
     # Add/remove logger handlers when settings changed or other port selected
@@ -259,8 +259,8 @@ class PortSelector(App[None]):
         if not port: port = self.sm.port.name if self.sm.state == serialModule.States.Active else None
         cfg = self.config.get('config',default_config)
         fname =constants.LOG_FILENAME
-        fprefix = port if port and (constants.CFG_LOGS_BY_PORT in cfg and cfg.get(constants.CFG_LOGS_BY_PORT, False)) else None
-        if constants.CFG_LOGS_BY_SESSION in cfg and cfg.get(constants.CFG_LOGS_BY_SESSION, False):
+        fprefix = port if port and (constants.CFG_LOGS_BY_PORT[1] in cfg and cfg.get(constants.CFG_LOGS_BY_PORT[1], False)) else None
+        if constants.CFG_LOGS_BY_SESSION[1] in cfg and cfg.get(constants.CFG_LOGS_BY_SESSION[1], False):
             formatted_time = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
             fprefix = f"{fprefix}.{formatted_time}" if fprefix else formatted_time
         path =pathlib.Path(constants.LOG_DIR, f"{fprefix}.{fname}" if fprefix else fname)
@@ -269,7 +269,7 @@ class PortSelector(App[None]):
         if self.lastLogName != currentLogName:
             self.logger.removeFileHandlers()
             self.fileHandler = None
-        if constants.CFG_LOG2FILE in cfg and cfg.get(constants.CFG_LOG2FILE, False):
+        if constants.CFG_LOG2FILE[1] in cfg and cfg.get(constants.CFG_LOG2FILE[1], False):
                 self.fileHandler = self.logger.addFileHandler(currentLogName, encoding='utf-8')
                 self.lastLogName = currentLogName
         elif self.fileHandler:
@@ -383,15 +383,10 @@ class PortSelector(App[None]):
             pass
     
     def runSerial(self, port):
-        self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE,115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT,False)))
+        self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE[1],115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT[1],False)))
             
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        key = None
-        for k in self.config['config'].keys():
-            if idf(k) == event.checkbox.id:
-                key = k
-                break
-        self.config['config'][key] = event.checkbox.value
+        self.config['config'][event.checkbox.id] = event.checkbox.value
         # Hack for reactive dict https://github.com/Textualize/textual/issues/1098
         self.config = self.config
         #TODO need to use async io library (?) or move to watch_config
