@@ -6,6 +6,7 @@ CSS_PATH = "css.tcss"
 LOG_FILENAME = "service.log"
 LOG_DIR = "logs"
 CONFIG_DIR = "config"
+LABELS_FILE = "labels.txt"
 
 #RichLog
 LOG_INITIAL_TEXT = '''
@@ -22,6 +23,7 @@ CFG_LOGS_BY_PORT = 'Separate port logs'
 CFG_LOGS_BY_SESSION = 'Separate session logs'
 CFG_AUTO_RECONNECT = 'autoReconnect'
 CFG_BAUDRATE = 'baudrate'
+CFG_SENDTO = 'Send to'
 
 #Ports
 PORTS_RENEWAL_DELAY = 1 #sec

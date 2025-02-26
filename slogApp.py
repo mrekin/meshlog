@@ -74,6 +74,7 @@ class PortSelector(App[None]):
         Binding(key="q", action="quit", description="Quit the app"),
         Binding(key='ctrl+a', action="expand_log('#vlogs')", description="Fullscreen logs"),
         Binding(key='ctrl+r', action="clear_log('#rclogs')", description="Clear logs"),
+        Binding(key='ctrl+l', action="save_labels()", description="Save labels"),
     ]
     
     def __init__(self, driver_class = None, css_path = None, watch_css = False, ansi_color = False, config = default_config):
@@ -81,6 +82,10 @@ class PortSelector(App[None]):
         self.logger = logger.SLogger()
         self.sm = serialModule.SerialModule(logger=self.logger.getLogger(), queue=Queue())  
         self.config = config
+    
+    '''
+    Actions
+    '''
      
     def action_quit(self):
         self.sm.stopLoop = True
@@ -103,7 +108,16 @@ class PortSelector(App[None]):
 
     def action_clear_log(self, id = None) -> None:
         self.logUI.clear()
-  
+    
+    # Save labelsList to file
+    def action_save_labels(self) -> None:
+        with open(constants.LABELS_FILE, 'w') as f:
+            yaml.dump(self.labelsList, f)
+            self.notify(f"Labes saved to {constants.LABELS_FILE}",timeout=2)
+
+    def action_sendto(self):
+        pass
+    
     def compose(self) -> ComposeResult:
         yield Header()
         with TabbedContent():
@@ -152,6 +166,11 @@ class PortSelector(App[None]):
         self.sm.stateInfoSubscribe(self.serialPortStateUpdate)
         # Process static labels
         self.run_worker(self.labelFilterWrapper(''))
+        cfg = self.config.get('config',{})
+        '''
+        if constants.CFG_SENDTO in cfg and cfg[constants.CFG_SENDTO]:
+            self.bind(keys='ctrl+m' , action="sendto" , description='123')
+        '''
         pass
     
     # Rules is a set of tuples (regexp, style) for highlighting

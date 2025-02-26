@@ -5,3 +5,4 @@ scripts/nuitka/
 scripts/pyinstaller/
 scripts/slogApp.spec
 .vscode/
+labels.txt
