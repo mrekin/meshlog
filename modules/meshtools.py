@@ -201,7 +201,11 @@ class MeshTools:
         return False
     
     def bootLoaderAvailable(self, platform: str):
-        return bool(self.boards[self.getBoardsList().index(platform)].get(constants.CFG_BOOTLOADER_URL,None))
+        try:
+            res=  bool(self.boards[self.getBoardsList().index(platform)].get(constants.CFG_BOOTLOADER_URL,None))
+        except Exception as e:
+            res = False
+        return res
     
     def forceBootloaderUpdate(self, platform: str, isOldBootloader: bool):
         available = self.bootLoaderAvailable(platform)

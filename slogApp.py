@@ -350,8 +350,11 @@ class PortSelector(App[None]):
                 dfuDrive, info = self.mt.checkDrive(d.mountpoint)
                 if dfuDrive:
                     self.mt_logs.write(f"Drive: {d.device}, dfuDrive: {dfuDrive}:")
-                    dl.highlighted = self.driveList.index(d)
-                    bl.highlighted = self.mt.getBoardsList().index(info.get('board_id',0))
+                    try:
+                        dl.highlighted = self.driveList.index(d)
+                        bl.highlighted = self.mt.getBoardsList().index(info.get('board_id',0))
+                    except Exception as e:
+                        pass
                     ubCB = self.query_one(f"#mmh_{meshtools.mmhSteps.UPDATE_BOOTLOADER.value}",Checkbox)
                     forceUpdateBootloader, bootLoaderAvailable = self.mt.forceBootloaderUpdate(info.get('board_id',''), 
                                                                           self.mt.checkVersion(info.get('bootloader','0'))
@@ -488,7 +491,9 @@ class PortSelector(App[None]):
                                 )
 
             case 'mmh_btn':
-                platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
+                if self.query_one('#platformList', OptionList).highlighted:
+                    platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
+                else: return
                 driveN = self.query_one('#driveList', OptionList).highlighted
                 if platform != None and driveN != None:
                     targetFolder = self.driveList[driveN].mountpoint
