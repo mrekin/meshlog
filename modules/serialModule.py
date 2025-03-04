@@ -117,9 +117,6 @@ class SerialModule(object):
                     continue
 
             if ser !=None:
-                if sendOnConnect:
-                    ser.write(sendOnConnect.encode())
-                    self.stopLoop = not retry                
                 try:
                     data = ser.readline()
                     self.setState(States.Active)
@@ -135,9 +132,14 @@ class SerialModule(object):
                             self.log.info(clean_text)
                         
                         if 'any key' in clean_text:
+                            self.log.info("> Sending \\n for factory erase")
                             ser.write('\\n'.encode())
-                            self.stopLoop = not retry
-
+                            self.log.info("> Done")
+                            self.stopLoop = True
+                            res = True
+                    #if sendOnConnect:
+#                        ser.write(sendOnConnect.encode())
+#                        self.stopLoop = not retry 
                 except KeyboardInterrupt as e:
                     self.queue.put(True)
                     self.log.info("Ctrl + C pressed")
@@ -182,10 +184,10 @@ class SerialModule(object):
                     return p
         return None
                 
-    def readNewSerial(self, ports = None, sendOnConnect:str = None):
+    async def readNewSerial(self, ports = None, sendOnConnect:str = None):
         self.stopLoopM()
-        asyncio.create_task(asyncio.to_thread(self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)))
-    
+        #asyncio.create_task(asyncio.to_thread(self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)))
+        return self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)
         
 def get_available_ports():
     ports = list(serial.tools.list_ports.comports())

@@ -135,7 +135,7 @@ class MeshTools:
             # Wait for drive to be mounted
             self.log.write(f"Waiting for drive {targetFolder} to be mounted..")
             try:
-                bingo = self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
+                bingo = await self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
             except Exception as e:
                 self.log.write(f"Error: {e}")
             
@@ -153,13 +153,16 @@ class MeshTools:
                                 platform = platform,
                                 targetFolder= targetFolder
                                 )
-            if platform == 'nRF52840-nicenano':
-                sm.readNewSerial(ports, sendOnConnect = '\\n')
+            try:
+                await asyncio.sleep(2)
+                bingo = await self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
+            except Exception as e:
+                self.log.write(f"Error: {e}")
             self.log.write("Done")
         if mmhSteps.UPDATE_FIRMWARE.name in steps:
             # Wait for drive to be mounted
             self.log.write(f"Waiting for drive {targetFolder} to be mounted..")
-            bingo = self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
+            bingo = await self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
             
             if not self.checkDrive(targetFolder):
                 self.log.write(f"Drive {targetFolder} is not a DFU drive")
@@ -176,15 +179,15 @@ class MeshTools:
             self.log.write("Done")         
         pass
     
-    def waitDriveOrSerial(self, targetFolder:str = None, sm = None, ports = None, delay:int =10, platform : str = None):
-            while not os.path.exists(targetFolder):
-                asyncio.sleep(1)
+    async def waitDriveOrSerial(self, targetFolder:str = None, sm = None, ports = None, delay:int =10, platform : str = None):
+            res = False
+            while not os.path.exists(targetFolder) and not res:
                 delay-=1
                 newPorts = sm.check_new_port(ports)
                 if newPorts:
                     if platform == 'nRF52840-nicenano':
                         self.log.write("Catching new serial")
-                        sm.readNewSerial(ports, sendOnConnect = '\\n')
+                        res = await sm.readNewSerial(ports, sendOnConnect = '\\n')
                         asyncio.sleep(1)
                 if not delay:
                     return False
