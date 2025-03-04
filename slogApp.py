@@ -7,7 +7,7 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
-from textual.events import Blur
+#from textual.events import Blur
 import modules.serialModule as serialModule
 import modules.meshtools as meshtools
 import modules.logger as logger

@@ -1,6 +1,6 @@
 import psutil, asyncio, re
-import meshtastic
-import os, requests, shutil, pathlib
+#import meshtastic
+import os, requests, shutil
 from . import constants, serialModule
 from urllib.parse import urlparse
 from enum import Enum

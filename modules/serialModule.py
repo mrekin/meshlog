@@ -18,7 +18,7 @@ from queue import Empty
 import time
 from time import asctime
 import binascii
-import queue, asyncio
+import asyncio
 from enum import Enum
 
 # Port Configuration
