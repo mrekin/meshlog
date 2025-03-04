@@ -1,12 +1,15 @@
 from textual import on
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, RadioSet, RadioButton, Input, RichLog, TextArea, Checkbox, Label, TabbedContent, TabPane, Static
+from textual.widgets import Header, Footer, RadioSet, RadioButton, Input, RichLog, TextArea, Checkbox, Label
+from textual.widgets import TabbedContent, TabPane, Static, OptionList, Button
+from textual.widgets.option_list import Option
 from textual.widget import Widget
 from textual.reactive import reactive
 from textual.containers import Horizontal, Vertical
 from textual.binding import Binding
 from textual.events import Blur
 import modules.serialModule as serialModule
+import modules.meshtools as meshtools
 import modules.logger as logger
 import modules.constants as constants
 import modules.labelFilter as lfilter
@@ -20,11 +23,12 @@ from rich.highlighter import ReprHighlighter
 import asyncio, re
 
 
-default_config = {constants.CFG_LOG2FILE[1]: True,
-                  constants.CFG_LOGS_BY_PORT[1]:False,
-                  constants.CFG_LOGS_BY_SESSION[1]:False,
-                  constants.CFG_AUTO_RECONNECT[1]: True,
-                  constants.CFG_BAUDRATE[1]: 115200}
+default_config = {constants.CFG_LOG2FILE: True,
+                  constants.CFG_LOGS_BY_PORT:False,
+                  constants.CFG_LOGS_BY_SESSION:False,
+                  constants.CFG_AUTO_RECONNECT: True,
+                  constants.CFG_BAUDRATE: 115200,
+                  }
 def idf(text):
     text = text.replace(' ','_')
     return text
@@ -51,16 +55,19 @@ class PortSelector(App[None]):
     SUB_TITLE = constants.SUB_TITLE
     CSS_PATH = constants.CSS_PATH
     ports =reactive([])
+    driveList = reactive([])
     ps = reactive([])
     portsRB = reactive([])
     config = reactive({}, always_update=True, init=False)
     isFullscreen = False
     logger = None
     sm = None
+    mt = None
     logUI = None
     fileHandler = None
     lastLogName = None
     text = reactive('')
+    mt_logs = None
     
     # Vars for labels filterings
     ruller = None
@@ -81,6 +88,7 @@ class PortSelector(App[None]):
         super().__init__(driver_class, css_path, watch_css, ansi_color)
         self.logger = logger.SLogger()
         self.sm = serialModule.SerialModule(logger=self.logger.getLogger(), queue=Queue())  
+        self.mt = meshtools.MeshTools(config)
         self.config = config
     
     '''
@@ -121,9 +129,9 @@ class PortSelector(App[None]):
     def compose(self) -> ComposeResult:
         yield Header()
         with TabbedContent():
-                with TabPane("Main", id="main-tab"):
+                with TabPane("Serial", id="main-tab"):
                     with Horizontal():
-                        with Vertical(id="leftColumn",classes="mui"):
+                        with Vertical(id="sm_leftColumn",classes="mui leftColumn"):
                             #self.createPortsRB()
                             pl = RadioSet( *self.portsRB, id='portList', name='Ports list')
                             yield pl
@@ -133,15 +141,33 @@ class PortSelector(App[None]):
                             self.logUI = RichLog(id='rclogs',highlight=True)
                             yield self.logUI
                             
+                with TabPane("MeshTools", id="meshtools-tab"):
+                        with Horizontal(id='mt_btnh', classes="mui"):
+                            with Horizontal(id='mmh_uf2', classes="") as uf2_container:
+                                uf2_container.border_title = 'UF2 boards tools'
+                                
+                                with Vertical(id="mt_leftColumn",classes="leftColumn"):
+                                    with OptionList(*self.mt.getBoardsList(),id='platformList', name='Platforms') as l:
+                                        l.border_title = 'Boards types'
+                                    with OptionList(id='driveList', name='Drives') as l:
+                                        l.border_title = 'Drives'
+                                with Vertical(id='buttons', classes='buttonsList'):
+                                    with Container(id='mmh_steps'):
+                                        for s in meshtools.mmhSteps:
+                                            yield Checkbox(id = f"mmh_{s.value}", label=f"{s.name}", classes="mmh_checkbox settings_element")
+                                    yield Button("Make me happy!",id = 'mmh_btn', classes='buttons', variant='primary')
+                        with Horizontal(id="mt_logsh"):
+                            yield RichLog(id='mt_logs',highlight=True)
+                            
                 with TabPane("Settings", id="settings-tab"):
                     with Container(classes="settings_tab", id = "settings"):
                         for key in self.config.get('config',{}).keys():
                             value = self.config.get('config',{}).get(key)
                             if isinstance(value, bool):
-                                yield Checkbox(id = key, label=constants.get_variable(key)[0],value=value, classes="settings_checkbox settings_element")
+                                yield Checkbox(id = key, label=constants.getVarName(key),value=value, classes="settings_checkbox settings_element")
                             elif isinstance(value, (int,str)):
                                 with Horizontal(classes="settings_label_input"):
-                                        yield Label(f"{constants.get_variable(key)[0]}:", classes="settings_label settings_element")
+                                        yield Label(f"{constants.getVarName(key)}:", classes="settings_label settings_element")
                                         inp = Input(value=str(value), id = key, tooltip=key, type="integer", classes="settings_input settings_element")
                                         inp.oldValue = str(value)
                                         yield inp
@@ -153,6 +179,8 @@ class PortSelector(App[None]):
                         yield Static(content = v, id="version")
                     
         yield Footer()
+    def on_mount(self):
+        pass
     
     async def on_ready(self) -> None:
         self.logger.addCustomLogger(self.write)
@@ -167,6 +195,8 @@ class PortSelector(App[None]):
         # Process static labels
         self.run_worker(self.labelFilterWrapper(''))
         cfg = self.config.get('config',{})
+        self.mt_logs = self.query_one('#mt_logs', RichLog)
+        self.mt.setLogCallback(self.mt_logs.write)
         '''
         if constants.CFG_SENDTO in cfg and cfg[constants.CFG_SENDTO]:
             self.bind(keys='ctrl+m' , action="sendto" , description='123')
@@ -249,7 +279,7 @@ class PortSelector(App[None]):
         #set actual file handlers (logToFile, separatePortLogs)
         self.updateLogger()
         # Set autoReconnect
-        self.sm.retry = self.config.get('config',default_config).get(constants.CFG_AUTO_RECONNECT[1],False)
+        self.sm.retry = self.config.get('config',default_config).get(constants.CFG_AUTO_RECONNECT,False)
         pass
     
     # Add/remove logger handlers when settings changed or other port selected
@@ -259,8 +289,8 @@ class PortSelector(App[None]):
         if not port: port = self.sm.port.name if self.sm.state == serialModule.States.Active else None
         cfg = self.config.get('config',default_config)
         fname =constants.LOG_FILENAME
-        fprefix = port if port and (constants.CFG_LOGS_BY_PORT[1] in cfg and cfg.get(constants.CFG_LOGS_BY_PORT[1], False)) else None
-        if constants.CFG_LOGS_BY_SESSION[1] in cfg and cfg.get(constants.CFG_LOGS_BY_SESSION[1], False):
+        fprefix = port if port and (constants.CFG_LOGS_BY_PORT in cfg and cfg.get(constants.CFG_LOGS_BY_PORT, False)) else None
+        if constants.CFG_LOGS_BY_SESSION in cfg and cfg.get(constants.CFG_LOGS_BY_SESSION, False):
             formatted_time = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
             fprefix = f"{fprefix}.{formatted_time}" if fprefix else formatted_time
         path =pathlib.Path(constants.LOG_DIR, f"{fprefix}.{fname}" if fprefix else fname)
@@ -269,7 +299,7 @@ class PortSelector(App[None]):
         if self.lastLogName != currentLogName:
             self.logger.removeFileHandlers()
             self.fileHandler = None
-        if constants.CFG_LOG2FILE[1] in cfg and cfg.get(constants.CFG_LOG2FILE[1], False):
+        if constants.CFG_LOG2FILE in cfg and cfg.get(constants.CFG_LOG2FILE, False):
                 self.fileHandler = self.logger.addFileHandler(currentLogName, encoding='utf-8')
                 self.lastLogName = currentLogName
         elif self.fileHandler:
@@ -302,6 +332,36 @@ class PortSelector(App[None]):
     async def watch_ports(self):
         self.createPortsRB()    
     
+    async def watch_driveList(self):
+        dl = self.query_one("#driveList", OptionList)
+        bl = self.query_one("#platformList", OptionList)
+        bl.highlighted  = None
+        if dl:
+            with self.app.batch_update():
+                l = len(dl.options)
+                if l!=0:
+                    for i in range(l-1,-1,-1):
+                        dl.remove_option_at_index(i)
+                droptions = [Option(d.device) for d in self.driveList]
+                dl.add_options(droptions)
+            # CHeck if drive has CURRENT.UF2 file
+            for d in self.driveList:
+                forceUpdateBootloader = False
+                dfuDrive, info = self.mt.checkDrive(d.mountpoint)
+                if dfuDrive:
+                    self.mt_logs.write(f"Drive: {d.device}, dfuDrive: {dfuDrive}:")
+                    dl.highlighted = self.driveList.index(d)
+                    bl.highlighted = self.mt.getBoardsList().index(info.get('board_id',0))
+                    ubCB = self.query_one(f"#mmh_{meshtools.mmhSteps.UPDATE_BOOTLOADER.value}",Checkbox)
+                    forceUpdateBootloader, bootLoaderAvailable = self.mt.forceBootloaderUpdate(info.get('board_id',''), 
+                                                                          self.mt.checkVersion(info.get('bootloader','0'))
+                                                                          )
+
+                    self.mt_logs.write( f"\tboard: {info.get('board_id','')}, new bootloader: {not forceUpdateBootloader}, bootloader: {info.get('bootloader', '')}, softdevice: {info.get('softdevice','')}")
+                    # Set update bootloder checkbox if dfu has old one
+                    ubCB.value = forceUpdateBootloader
+                    ubCB.disabled = not bootLoaderAvailable
+                    
     # Check if labels changed. If true -sort them. For each label create Static widget and add it to labels container
     async def watch_labelsList(self):
         if self.labelsList:
@@ -319,10 +379,17 @@ class PortSelector(App[None]):
     # Update port list every PORTS_RENEWAL_DELAY sec
     def updatePortsTh(self):
         while self.state == States.Active:
+            # Update ports
             avports, currentPort = self.sm.get_available_ports()
 
             if self.ports != avports or currentPort:
                 self.setPorts(avports)
+                
+            # Update drives
+            drives = self.mt.listDrives()
+            self.driveList = drives
+            
+            
             time.sleep(constants.PORTS_RENEWAL_DELAY)
     
     '''
@@ -383,15 +450,20 @@ class PortSelector(App[None]):
             pass
     
     def runSerial(self, port):
-        self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE[1],115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT[1],False)))
+        self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE,115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT,False)), waitNewPort=False)
+
+
             
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        self.config['config'][event.checkbox.id] = event.checkbox.value
-        # Hack for reactive dict https://github.com/Textualize/textual/issues/1098
-        self.config = self.config
-        #TODO need to use async io library (?) or move to watch_config
-        writeConfigFile(self.config, "config")
-        self.notify(message="Config saved",timeout=1)
+        if event.checkbox.parent.id == 'settings':
+            self.config['config'][event.checkbox.id] = event.checkbox.value
+            # Hack for reactive dict https://github.com/Textualize/textual/issues/1098
+            self.config = self.config
+            #TODO need to use async io library (?) or move to watch_config
+            writeConfigFile(self.config, "config")
+            self.notify(message="Config saved",timeout=1)
+        if event.checkbox.parent.id == 'mmh_steps':
+            pass
 
     @on(Input.Submitted,selector='.settings_element')
     @on(Input.Blurred,selector='.settings_element')
@@ -404,7 +476,33 @@ class PortSelector(App[None]):
             #TODO need to use async io library
             writeConfigFile(self.config, "config")
             self.notify(message=f"Config saved: {event.input.id}",timeout=2)        
+    
+    @work(exclusive=True, thread=True)
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        match event.button.id:
+            case 'bootl':
+                if self.query_one('#driveList', OptionList).highlighted != None and self.query_one('#platformList', OptionList).highlighted != None:
+                    self.mt.copyFile(type = 'bootloader', 
+                                platform = self.query_one('#platformList', OptionList).highlighted,
+                                targetFolder= self.driveList[self.query_one('#driveList', OptionList).highlighted].mountpoint
+                                )
 
+            case 'mmh_btn':
+                platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
+                driveN = self.query_one('#driveList', OptionList).highlighted
+                if platform != None and driveN != None:
+                    targetFolder = self.driveList[driveN].mountpoint
+                    steps = [ s.name for s in meshtools.mmhSteps if self.query_one(f"#mmh_{s.value}").value == True ]
+                    try:
+                        await self.mt.execMmhSteps(platform=platform, targetFolder=targetFolder, steps= steps ,sm = self.sm)
+                        #asyncio.create_task(asyncio.to_thread(self.mt.execMmhSteps,platform=platform, targetFolder=targetFolder, steps= steps, sm = self.sm))
+                    except Exception as e:
+                        e.__traceback__
+                        self.write(str(e))
+                        raise e
+                        pass
+    
+    
     
     def setPorts(self, ports: list):
         self.ps = [f"{port.name}" for port in ports]

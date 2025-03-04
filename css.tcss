@@ -9,11 +9,24 @@
     border: solid $secondary;
 }
 
-#leftColumn {
+.leftColumn {
     padding: 0;
     border: solid $secondary;
-    width: 2fr;
     height: auto; /*99%*/
+}
+#sm_leftColumn {
+    width: 2.3fr;
+}
+#mt_leftColumn {
+    width: 3fr;
+}
+
+.buttonsList {
+    width: 10fr;
+}
+.buttons {
+   /* border: solid $secondary;*/
+   margin: 1 2;
 }
 
 .mui {
@@ -50,7 +63,7 @@
     height: 1;    
 }
 
-.settings_checkbox { 
+.settings_checkbox, .mmh_checkbox  { 
     /*Set color for selected (X) symbol*/
     &.-on > .toggle--button {
         color: yellow;
@@ -88,4 +101,8 @@ Lbl{
 
 #version {
     height: 1fr;
+}
+
+#mmh_steps {
+    height: auto
 }

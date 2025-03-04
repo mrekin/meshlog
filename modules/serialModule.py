@@ -18,7 +18,7 @@ from queue import Empty
 import time
 from time import asctime
 import binascii
-import queue
+import queue, asyncio
 from enum import Enum
 
 # Port Configuration
@@ -72,16 +72,21 @@ class SerialModule(object):
         if changed or state == States.Reconnecting:
             self.triggerSubs()
         
-    def stopLoop(self):
+    def stopLoopM(self):
         self.stopLoop = True
+        while self.state in (States.Active, States.Reconnecting, States.Closing):
+            time.sleep(0.1)
         
 
-    def mainLoop(self, prt:ListPortInfo = None, baud = 115200, retry = False):
+    def mainLoop(self, prt:ListPortInfo = None, baud = 115200, retry = False, reconnectDelay = 0.2, waitNewPort = False,ports = None, sendOnConnect:str = None):
+        if waitNewPort:
+            prt = self.catch_new_port(ports)
         self.setPort(prt, baud)
         self.stopLoop = False
         self.retry = retry
         res = False
         ## Begin
+
         ser = None
         self.log.info(f"> Opening port: {self.port.name} ({self.port.device})")
         self.setState(States.Idle)
@@ -108,10 +113,13 @@ class SerialModule(object):
                         break
                     #self.log.info(".")
                     self.setState(States.Reconnecting)
-                    time.sleep(0.2)
+                    time.sleep(reconnectDelay)
                     continue
 
             if ser !=None:
+                if sendOnConnect:
+                    ser.write(sendOnConnect.encode())
+                    self.stopLoop = not retry                
                 try:
                     data = ser.readline()
                     self.setState(States.Active)
@@ -125,6 +133,11 @@ class SerialModule(object):
                         clean_text = clean_text.replace('\x00', '')
                         if len(clean_text) > 0:
                             self.log.info(clean_text)
+                        
+                        if 'any key' in clean_text:
+                            ser.write('\\n'.encode())
+                            self.stopLoop = not retry
+
                 except KeyboardInterrupt as e:
                     self.queue.put(True)
                     self.log.info("Ctrl + C pressed")
@@ -143,7 +156,38 @@ class SerialModule(object):
         ports = list(serial.tools.list_ports.comports())
         ports = [p for p in ports if p.hwid != 'n/a']
         return ports, self.port 
+
+    def catch_new_port(self, ports):
+        if not ports:
+            ports = self.get_available_ports()[0]
+        w= True
+        while(w):
+            newPorts = self.get_available_ports()[0]
+            #find port in new ports which not in old ports
+            if ports != newPorts:
+                for p in newPorts:
+                    if p not in ports:
+                        return p
+                ports = newPorts
+    
+    def check_new_port(self, ports):
+        if not ports:
+            ports = self.get_available_ports()[0]
+
+        newPorts = self.get_available_ports()[0]
+        #find port in new ports which not in old ports
+        if ports != newPorts:
+            for p in newPorts:
+                if p not in ports:
+                    return p
+        return None
+                
+    def readNewSerial(self, ports = None, sendOnConnect:str = None):
+        self.stopLoopM()
+        asyncio.create_task(asyncio.to_thread(self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)))
+    
         
 def get_available_ports():
     ports = list(serial.tools.list_ports.comports())
-    return ports   
+    return ports
+

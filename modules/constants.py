@@ -1,5 +1,7 @@
+from enum import Enum
+
 #App constants
-VERSION = "0.13"
+VERSION = "0.2"
 TITLE = "Meshtastic Serial Logger"
 SUB_TITLE = "Usefull serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
@@ -19,24 +21,42 @@ LOG_INITIAL_TEXT = '''
 '''
 
 # Settings ({label text}, {cfg param})
-CFG_LOG2FILE = ('Log to file','logToFile')
-CFG_LOGS_BY_PORT = ('Separate port logs','separatePortLogs')
-CFG_LOGS_BY_SESSION = ('Separate session logs', 'separateSessionLogs')
-CFG_AUTO_RECONNECT = ('autoReconnect', 'autoReconnect')
-CFG_BAUDRATE = ('baudrate', 'baudrate')
-CFG_SENDTO = ('Send to', 'sendTo')
-CFG_NRF52_BOOTLOADER_URL = ('NRF52 Bootloader URL', 'nrf52BootloaderURL')
-CFG_NRF52_FULLERASE_URL = ('NRF52 Fullerase URL', 'nrf52FulleraseURL')
+CFG_LOG2FILE = 'logToFile'
+CFG_LOGS_BY_PORT = 'separatePortLogs'
+CFG_LOGS_BY_SESSION = 'separateSessionLogs'
+CFG_AUTO_RECONNECT = 'autoReconnect'
+CFG_BAUDRATE = 'baudrate'
+CFG_SENDTO = 'sendTo'
+CFG_BOOTLOADER_URL = 'bootloaderURL'
+CFG_FULLERASE_URL = 'fulleraseURL'
+CFG_FIRMWARE_URL = 'firmwareURL'
 
-def get_variable(key) -> tuple|list|None: 
-    vars = [globals()[var] for var in globals() if var.startswith('CFG_') and isinstance(globals()[var], tuple)]
-    if key:
-        for v in vars:
-            if v[1] == key:
-                return v
-        return None
-    return vars
+cfg_labels = {
+    'logToFile': 'Log to file',
+    'separatePortLogs': 'Separate port logs',
+    'separateSessionLogs': 'Separate session logs',
+    'sendTo': 'Send to',
+    'nrf52BootloaderURL': 'NRF52 Bootloader URL',
+    'nrf52FulleraseURL': 'NRF52 Fullerase URL',
+}
 
+
+def getVarName(key) -> str:
+    if key in cfg_labels:
+        return cfg_labels[key]
+    return key
 
 #Ports
 PORTS_RENEWAL_DELAY = 1 #sec
+
+# Platforms
+class PLATFORMS(Enum):
+    NRF52 = 0
+    RP2040 = 1
+    ESP32 = 2
+    
+UF2_TXT_TOKENS = {
+    'board_id': r'Board-ID: (.*)$',
+    'softdevice' : r'SoftDevice: (.*)$',
+    'bootloader' : r'UF2 Bootloader v*([0-9\\.]+)',
+}
