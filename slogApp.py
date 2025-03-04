@@ -491,7 +491,7 @@ class PortSelector(App[None]):
                                 )
 
             case 'mmh_btn':
-                if self.query_one('#platformList', OptionList).highlighted:
+                if self.query_one('#platformList', OptionList).highlighted != None:
                     platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
                 else: return
                 driveN = self.query_one('#driveList', OptionList).highlighted
