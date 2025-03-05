@@ -79,7 +79,8 @@ python3 ./slogApp.py
   - [ ] Get node status
   - [ ] Trigger DFU mode
   - [ ] (?) Trigger reboot/nodeinfo send/etc
-- [ ] NRF52 flashing
-  - [ ] Upload fullerase uf2
-  - [ ] Upload newest bootloader
-  - [ ] Upload firmware
+- [x] NRF52 flashing
+  - [x] Upload fullerase uf2
+  - [x] Upload newest bootloader
+  - [x] Upload firmware
+  - [ ] Open serial after flashing
