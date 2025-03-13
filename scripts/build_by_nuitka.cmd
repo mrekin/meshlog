@@ -1,1 +1,1 @@
-nuitka --onefile --main=../slogApp.py --include-data-files=../css.tcss=./ --standalone --output-dir=nuitka/
+nuitka --onefile --windows-icon-from-ico=../images/icon.png --main=../slogApp.py --include-data-files=../css.tcss=./ --standalone --output-dir=nuitka/

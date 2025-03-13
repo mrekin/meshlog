@@ -499,7 +499,10 @@ class PortSelector(App[None]):
                     targetFolder = self.driveList[driveN].mountpoint
                     steps = [ s.name for s in meshtools.mmhSteps if self.query_one(f"#mmh_{s.value}").value == True ]
                     try:
-                        await self.mt.execMmhSteps(platform=platform, targetFolder=targetFolder, steps= steps ,sm = self.sm)
+                        stepsExecuted = await self.mt.execMmhSteps(platform=platform, targetFolder=targetFolder, steps= steps ,sm = self.sm)
+                        await self.mmhDisableExecuted(stepsExecuted = stepsExecuted)
+                        if meshtools.mmhSteps.OPEN_CONSOLE.name in stepsExecuted:
+                            self.logUI.focus()
                         #asyncio.create_task(asyncio.to_thread(self.mt.execMmhSteps,platform=platform, targetFolder=targetFolder, steps= steps, sm = self.sm))
                     except Exception as e:
                         e.__traceback__
@@ -507,7 +510,13 @@ class PortSelector(App[None]):
                         raise e
                         pass
     
-    
+    async def mmhDisableExecuted(self, stepsExecuted : list = []):
+        if stepsExecuted:
+            for s in stepsExecuted:
+                try:
+                    self.query_one(f"#mmh_{meshtools.mmhSteps[s].value}",Checkbox).value = False
+                except Exception as e: pass
+        
     
     def setPorts(self, ports: list):
         self.ps = [f"{port.name}" for port in ports]

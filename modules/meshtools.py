@@ -121,6 +121,7 @@ class MeshTools:
         return dfuDrive, uf2Info
     
     async def execMmhSteps(self, platform = None, targetFolder = None, steps= [], sm: serialModule.SerialModule  = None):
+        stepsExecuted = []
         ports = sm.get_available_ports()[0]
         if mmhSteps.UPDATE_BOOTLOADER.name in steps:
             self.log.write(f"--> Bootloader step.")            
@@ -130,6 +131,7 @@ class MeshTools:
                                 )
             self.log.write("Done")
             ports = sm.get_available_ports()[0]
+            stepsExecuted.append(mmhSteps.UPDATE_BOOTLOADER.name)
         if mmhSteps.FULL_ERASE.name in steps:
             self.log.write(f"--> Full erase step.")
             # Wait for drive to be mounted
@@ -145,7 +147,7 @@ class MeshTools:
             
             if not bingo:
                 self.log.write(f"Please enable DFU mode manually (double reset) and do Full Erase again")
-                return
+                return stepsExecuted
             
             self.log.write("Downloading full erase file...")
             
@@ -153,12 +155,14 @@ class MeshTools:
                                 platform = platform,
                                 targetFolder= targetFolder
                                 )
+            ports = sm.get_available_ports()[0]
             try:
                 await asyncio.sleep(2)
                 bingo = await self.waitDriveOrSerial(ports = ports, sm = sm, targetFolder = targetFolder, delay = 10, platform = platform)
             except Exception as e:
                 self.log.write(f"Error: {e}")
             self.log.write("Done")
+            stepsExecuted.append(mmhSteps.FULL_ERASE.name)
         if mmhSteps.UPDATE_FIRMWARE.name in steps:
             # Wait for drive to be mounted
             self.log.write(f"Waiting for drive {targetFolder} to be mounted..")
@@ -170,14 +174,21 @@ class MeshTools:
             
             if not bingo:
                 self.log.write(f"Please enable DFU mode manually (double reset) and do UPDATE_FIRMWARE again")
-                return
+                return stepsExecuted
             self.log.write("Downloading firmware file...")
             self.copyFile(type = 'firmware', 
                                 platform = platform,
                                 targetFolder= targetFolder
                                 )   
-            self.log.write("Done")         
-        pass
+            self.log.write("Done")
+            stepsExecuted.append(mmhSteps.UPDATE_FIRMWARE.name) 
+
+        if mmhSteps.OPEN_CONSOLE.name in steps:
+            self.log.write(f"Opening serial console...")
+            asyncio.create_task(sm.readNewSerial(ports))
+            self.log.write("Done. Switching to serial pane...")
+            stepsExecuted.append(mmhSteps.OPEN_CONSOLE.name)
+        return stepsExecuted
     
     async def waitDriveOrSerial(self, targetFolder:str = None, sm = None, ports = None, delay:int =10, platform : str = None):
             res = False
@@ -188,7 +199,8 @@ class MeshTools:
                     if platform == 'nRF52840-nicenano':
                         self.log.write("Catching new serial")
                         res = await sm.readNewSerial(ports, sendOnConnect = '\\n')
-                        asyncio.sleep(1)
+                        self.log.write("Done. Check Serial tab. Re-connect USB if Factory restore not catched")
+                        #await asyncio.sleep(1)
                 if not delay:
                     return False
             return True

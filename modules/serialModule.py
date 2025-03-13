@@ -134,12 +134,14 @@ class SerialModule(object):
                         if 'any key' in clean_text:
                             self.log.info("> Sending \\n for factory erase")
                             ser.write('\\n'.encode())
-                            self.log.info("> Done")
+                            self.log.info("> Done. Enter DFU mode and flash firmware.")
                             self.stopLoop = True
                             res = True
-                    #if sendOnConnect:
-#                        ser.write(sendOnConnect.encode())
-#                        self.stopLoop = not retry 
+                    if sendOnConnect:
+                        self.log.info(f"> Sending '{sendOnConnect}'")
+                        ser.write(sendOnConnect.encode())
+                        self.log.info("> Done.")
+                        self.stopLoop = not retry 
                 except KeyboardInterrupt as e:
                     self.queue.put(True)
                     self.log.info("Ctrl + C pressed")
@@ -161,7 +163,8 @@ class SerialModule(object):
 
     def catch_new_port(self, ports):
         if not ports:
-            ports = self.get_available_ports()[0]
+#            ports = self.get_available_ports()[0]
+            ports = []
         w= True
         while(w):
             newPorts = self.get_available_ports()[0]
