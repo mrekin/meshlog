@@ -28,6 +28,7 @@ default_config = {constants.CFG_LOG2FILE: True,
                   constants.CFG_LOGS_BY_SESSION:False,
                   constants.CFG_AUTO_RECONNECT: True,
                   constants.CFG_BAUDRATE: 115200,
+                  constants.CFG_AUTO_SAVE_NODE_CFG: True,
                   }
 def idf(text):
     text = text.replace(' ','_')
@@ -330,7 +331,8 @@ class PortSelector(App[None]):
     
     # Build Radiobuttons when port list changes
     async def watch_ports(self):
-        self.createPortsRB()    
+        self.createPortsRB()
+        self.checkPortAndSave()
     
     async def watch_driveList(self):
         dl = self.query_one("#driveList", OptionList)
@@ -527,6 +529,26 @@ class PortSelector(App[None]):
             if p.name == name:
                 return p
         return None
+    
+    '''
+    Check port pid in config
+    if found - try to connect by meshtools and get key and cfg (if config params is true)
+    '''
+    @work(exclusive=True, thread=True)
+    async def checkPortAndSave(self):
+        #Autosave only if MeshTab active
+        tab = self.query_one("#meshtools-tab", TabPane)
+        if self.query_one("#meshtools-tab", TabPane).is_on_screen:
+            #Autosave only if cfg parameter is true
+            if self.config.get('config').get(constants.CFG_AUTO_SAVE_NODE_CFG,False):
+                #Exclude already opened/reconnecting port 
+                if self.sm.state in (serialModule.States.Active, serialModule.States.Reconnecting):
+                    ports = [p for p in self.ports if p != self.sm.port]
+                else:
+                    ports = self.ports
+                self.mt.autoSave(ports)
+
+        
         
 
 def readConfig():

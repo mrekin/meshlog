@@ -20,6 +20,9 @@ from time import asctime
 import binascii
 import asyncio
 from enum import Enum
+import platform
+if platform.system() != "Windows":
+    import termios
 
 # Port Configuration
 class States(Enum):
@@ -88,7 +91,7 @@ class SerialModule(object):
         ## Begin
 
         ser = None
-        self.log.info(f"> Opening port: {self.port.name} ({self.port.device})")
+        self.log.info(f"> Opening port: {self.port.name} ({self.port.device}, {self.port.hwid})")
         self.setState(States.Idle)
         while not self.stopLoop:
             try:
@@ -105,7 +108,20 @@ class SerialModule(object):
             if ser == None:
                 try:
                     if not self.port: raise Exception("No port selected")
-                    ser = Serial(self.port.device,baud,timeout=1)
+                    if platform.system() != "Windows":
+                        with open(self.devPath, encoding="utf8") as f:
+                            attrs = termios.tcgetattr(f)
+                            attrs[2] = attrs[2] & ~termios.HUPCL
+                            termios.tcsetattr(f, termios.TCSAFLUSH, attrs)
+                            f.close()
+                        time.sleep(0.1)
+                    #ser = Serial(self.port.device,baud,timeout=1)
+                    ser = Serial()
+                    ser.port = self.port.device
+                    ser.baudrate = baud
+                    ser.timeout=1
+                    #ser.dtr =0
+                    ser.open()
                 except Exception as e:
                     ser = None
                     if self.retry == False:
