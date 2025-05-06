@@ -20,11 +20,20 @@ class mmhSteps(Enum):
     FULL_ERASE = 1
     UPDATE_FIRMWARE = 2
     OPEN_CONSOLE = 3
+
+class meshOptions(Enum):
+    SAVE_NODE_CFG = 0
+    UPLOAD_NODE_CFG = 1
+    TRIGGER_DFU = 2
+    SEND_NODE_INFO = 3
     
 class MeshTools:
     boards = {}
     log = Log()
     connectedNodes = {}
+    serialConn = None
+    tcpConn = None
+    bluetoothConn = None
     
     def __init__(self,cfg, log_callback = None):
         self.boards = cfg.get('boards','')
@@ -246,7 +255,7 @@ class MeshTools:
     #Method tries to open given port and save board config and secret keys using meshtastic library (if config has property autoSaveNodeKeys = True and autoSaveNodeConfig = True)
     # TODO need to able save cfg not only by id, but by nodeName too (?) 
     # or just save nodename in file name and let select it on cfg upload.
-    def autoSave(self, ports:list = None, overrideExisting = False):
+    async def autoSaveCFG(self, ports:list = None, overrideExisting = False):
 
         if not os.path.exists(constants.NODES_CONFIG_DIR):
             os.makedirs(constants.NODES_CONFIG_DIR)
@@ -256,6 +265,7 @@ class MeshTools:
                 if port.device not in self.connectedNodes.keys() or overrideExisting:
                     nodeInfo = None
                     try:
+                        self.log.write(f"Checking {port.device}...")
                         with meshtastic.serial_interface.SerialInterface(port.device) as interface:
                             self.log.write(f"Found meshtastic device at {port.device}")
 
@@ -272,7 +282,7 @@ class MeshTools:
                             else:
                                 self.log.write(f"Config for {nodeId} already exist. Remove it or save config manually")
                     except Exception as ee:
-                        pass
+                        self.log.write(f"ERROR: {str(ee)}...")
                     finally:
                         self.connectedNodes[port.device] = nodeInfo
             if len(self.connectedNodes) > 0:
@@ -286,4 +296,16 @@ class MeshTools:
         except Exception as e:
             pass
             
+    async def openSerial(self, port: None):
+        if self.serialConn != None and self.serialConn.devPath != port.device:
+            await self.closeSerial(portPath = self.serialConn.devPath)
+        if self.serialConn != None and self.serialConn.devPath == port.device:
+            return
+        self.log.write(f"Connecting to {port.device}")
+        self.serialConn = meshtastic.serial_interface.SerialInterface(port.device)
+        self.log.write(f"Done.")
     
+    async def closeSerial(self, port: None, portPath: None):
+        if self.serialConn:
+            self.serialConn.close()
+            self.serialConn = None

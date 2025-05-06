@@ -75,10 +75,10 @@ class SerialModule(object):
         if changed or state == States.Reconnecting:
             self.triggerSubs()
         
-    def stopLoopM(self):
+    async def stopLoopM(self):
         self.stopLoop = True
         while self.state in (States.Active, States.Reconnecting, States.Closing):
-            time.sleep(0.1)
+            asyncio.sleep(0.1)
         
 
     def mainLoop(self, prt:ListPortInfo = None, baud = 115200, retry = False, reconnectDelay = 0.2, waitNewPort = False,ports = None, sendOnConnect:str = None):
@@ -204,7 +204,7 @@ class SerialModule(object):
         return None
                 
     async def readNewSerial(self, ports = None, sendOnConnect:str = None):
-        self.stopLoopM()
+        await self.stopLoopM()
         #asyncio.create_task(asyncio.to_thread(self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)))
         return self.mainLoop(retry= False, waitNewPort= True, ports= ports, sendOnConnect= sendOnConnect)
         
