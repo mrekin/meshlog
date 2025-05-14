@@ -33,12 +33,12 @@ python3 ./slogApp.py
 1. Activate venv
 2. Install nuitka (preffered) or pyinstaller
    ```
-   pip3 install nuitka
-   pip3 install imageio
+   pip3 install -U nuitka
+   pip3 install -U imageio
    ```
     or 
    ```
-   pip3 install pyinstaller
+   pip3 install -U pyinstaller
    ```
 4. For Linux and nuitka you may need to install
    `sudo apt install patchhelf`
