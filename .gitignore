@@ -5,5 +5,7 @@ scripts/nuitka/
 scripts/pyinstaller/
 scripts/slogApp.spec
 .vscode/
+.continue/
 labels.txt
 files/
+nodes_cfg/

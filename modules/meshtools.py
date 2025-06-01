@@ -1,10 +1,15 @@
 import psutil, asyncio, re
-#import meshtastic
+import meshtastic
+import meshtastic.serial_interface
+import meshtastic.__main__ as meshtastic_cli
 import os, requests, shutil
+
+import yaml._yaml
 from . import constants, serialModule
 from urllib.parse import urlparse
 from enum import Enum
 import pyrfc6266
+import yaml
 
 class Log(object):
     def write(self, text):
@@ -15,15 +20,27 @@ class mmhSteps(Enum):
     FULL_ERASE = 1
     UPDATE_FIRMWARE = 2
     OPEN_CONSOLE = 3
+
+class meshOptions(Enum):
+    SAVE_NODE_CFG = 0
+    #UPLOAD_NODE_CFG = 1
+    TRIGGER_DFU = 2
+    #SEND_NODE_INFO = 3
     
 class MeshTools:
     boards = {}
     log = Log()
+    connectedNodes = {}
+    serialConn = None
+    tcpConn = None
+    bluetoothConn = None
     
     def __init__(self,cfg, log_callback = None):
         self.boards = cfg.get('boards','')
+        
         if log_callback:
             self.log.write = log_callback
+            self.log.write("First select port or drive to use meshtools")
     
     def getBoardsList(self):
         return [b.get('name', None) for b in self.boards]
@@ -35,6 +52,23 @@ class MeshTools:
         drives = psutil.disk_partitions()
         return drives
     
+    #Logic for meshOptions buttons (on_pressed)
+    async def meshOptionsFunc(self,id):
+        if not isinstance(id, int):
+            id = int(id.split('_')[-1])
+        match id:
+
+            case meshOptions.TRIGGER_DFU.value:
+                await self.triggerDFUMode()
+            case meshOptions.SAVE_NODE_CFG.value:
+                await self.saveNodeCfg()
+            #case meshOptions.UPLOAD_NODE_CFG.value:
+                #pass
+            case _:
+                pass
+
+
+
     # method for downloading file from given url to folder
     def downloadFile(self, url= None, folder = constants.FILES_DIR, filename = None, type = None, platform: int = None):
         
@@ -226,3 +260,102 @@ class MeshTools:
         available = self.bootLoaderAvailable(platform)
         force = available if isOldBootloader else False
         return force, available
+    
+    # Chech if port pid in list.     
+    # PIDs list loaded from config file like 'platform': [pids list]
+    def checkPortPID(self, pid:str):
+        for platform in self.boards:
+            for p in self.boards[platform].get(constants.CFG_PID,[]):
+                if pid == p:
+                    return True
+        return False
+    
+
+    async def triggerDFUMode(self, port = None):
+        self.log.write("Triggering DFU mode...")
+        try:
+            if port:
+                with meshtastic.serial_interface.SerialInterface(port.device) as interface:
+                    self.log.write(f"Found meshtastic device at {port.device}")
+                    interface.localNode.enterDFUMode()
+            elif self.serialConn:
+                self.serialConn.localNode.enterDFUMode()
+            self.log.write("Done")
+        except Exception as e:
+            self.log.write(f"Error: {e}")
+            
+
+    
+    #Method tries to open given port and save board config and secret keys using meshtastic library (if config has property autoSaveNodeKeys = True and autoSaveNodeConfig = True)
+    # TODO need to able save cfg not only by id, but by nodeName too (?) 
+    # or just save nodename in file name and let select it on cfg upload.    
+    async def autoSaveCFG(self, ports:list = None, overrideExisting = False):
+
+        if not os.path.exists(constants.NODES_CONFIG_DIR):
+            os.makedirs(constants.NODES_CONFIG_DIR)
+        try:
+            for port in ports:
+                # Do not connect to every port every time
+                if port.device not in self.connectedNodes.keys() or overrideExisting:
+                    nodeInfo = None
+                    try:
+                        self.log.write(f"Trying open {port.device} as meshtastic device...")
+                        with meshtastic.serial_interface.SerialInterface(port.device) as interface:
+                            self.log.write(f"Found meshtastic device at {port.device}")
+                            await self.saveNodeCfg(interface, overrideExisting)
+                            
+                    except Exception as ee:
+                        #self.log.write(f"ERROR: {str(ee)}...")
+                        pass
+                    finally:
+                        self.connectedNodes[port.device] = nodeInfo
+            if len(self.connectedNodes) > 0:
+                devices = [p.device for p in ports]
+                c = {}
+                for cn in self.connectedNodes.keys():
+                    if cn in devices:
+                       c[cn] = self.connectedNodes.get(cn)
+                self.connectedNodes = c
+            pass 
+        except Exception as e:
+            pass
+
+    async def saveNodeCfg(self, interface = None,  overrideExisting = False):
+        """
+        Saves the current node configuration to a YAML file.
+        If a config for the node already exists, it will only be overwritten if overrideExisting is True.
+        """
+        if not interface:
+            interface = self.serialConn
+        if interface:
+            nodeInfo = interface.getMyNodeInfo()
+            nodeId = nodeInfo.get('num',0)
+            self.log.write(f"Saving node '{nodeId}({nodeInfo.get('user',{}).get('shortName','')})' config...")
+            cfgPath = os.path.join(constants.NODES_CONFIG_DIR, f"cfg_{nodeId}.yaml")
+            cfg = meshtastic_cli.export_config(interface)
+            cfg = yaml.safe_load(cfg)
+            if not os.path.exists(cfgPath) or overrideExisting:
+                with open(cfgPath, 'w') as f:
+                    yaml.dump(cfg, f)
+                self.log.write(f"Done.")
+            else:
+                self.log.write(f"Config for {nodeId} already exist. Remove it or save config manually")
+        else:
+            self.log.write("Node not connected. Connect to a node first.")
+
+
+    async def openSerial(self, port):
+        if self.serialConn != None and self.serialConn.devPath != port.device:
+            await self.closeSerial(portPath = self.serialConn.devPath)
+        if self.serialConn != None and self.serialConn.devPath == port.device:
+            return
+        self.log.write(f"Connecting to {port.device}")
+        self.serialConn = meshtastic.serial_interface.SerialInterface(port.device)
+        self.log.write(f"Meshtatic interface opened.")
+    
+    async def closeSerial(self):
+        if self.serialConn:
+            self.log.write(f"Closing node connection..")
+            self.serialConn.close()
+            self.log.write(f"Done")
+            self.serialConn = None

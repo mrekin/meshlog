@@ -1,15 +1,17 @@
 from enum import Enum
 
 #App constants
-VERSION = "0.22"
-TITLE = "Meshtastic Serial Logger"
+VERSION = "0.3"
+TITLE = f"Meshtastic Serial Logger ({VERSION})"
 SUB_TITLE = "Useful serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
 LOG_FILENAME = "service.log"
 LOG_DIR = "logs"
 CONFIG_DIR = "config"
+NODES_CONFIG_DIR = "nodes_cfg"
 FILES_DIR = "files"
 LABELS_FILE = "labels.txt"
+DEF_CONFIG_URL = "https://api.github.com/repos/mrekin/meshlog/contents/config"
 
 #RichLog
 LOG_INITIAL_TEXT = '''
@@ -17,6 +19,10 @@ LOG_INITIAL_TEXT = '''
 > Use `Shift`+`LeftMButton` to select text
 > Use `Enter` to copy selected text
 > Use `ESC` to cancel selection
+\n\n
+'''
+MT_INITIAL_TEXT = '''
+> Select `COM port` or `Drive` to use meshtools
 \n\n
 '''
 
@@ -30,6 +36,8 @@ CFG_SENDTO = 'sendTo'
 CFG_BOOTLOADER_URL = 'bootloaderURL'
 CFG_FULLERASE_URL = 'fulleraseURL'
 CFG_FIRMWARE_URL = 'firmwareURL'
+CFG_AUTO_SAVE_NODE_CFG = 'autoSaveNodeCfg'
+CFG_AUTO_SAVE_NODE_KEY = 'autoSaveNodeKey'
 
 cfg_labels = {
     'logToFile': 'Log to file',

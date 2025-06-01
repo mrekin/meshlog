@@ -1,3 +1,6 @@
+Screen {
+    overflow-y: auto;
+}
 #labelsContainer {
     width: 100%;
     border: solid $secondary;
@@ -14,7 +17,7 @@
     border: solid $secondary;
     height: auto; /*99%*/
 }
-#sm_leftColumn {
+#sm_leftColumn, #sm_labelsColumn {
     width: 2.3fr;
 }
 #mt_leftColumn {
@@ -22,11 +25,19 @@
 }
 
 .buttonsList {
-    width: 10fr;
+    width: 8fr;
+    border: solid $secondary; 
 }
-.buttons {
+.dfuButtons {
    /* border: solid $secondary;*/
    margin: 1 2;
+}
+
+.mesh_button {
+   margin: 1 1;  
+   height: 1.25;
+   width: 1fr;
+   border: none;
 }
 
 .mui {
@@ -42,12 +53,20 @@
     width: 1fr; 
     height: 10fr;
 }
-#vlogs {
+#vlogs{
     padding: 0;
     border: solid $accent;
     width: 10fr; 
     height: 99%;
 }
+
+#sm_toolsColumn {
+    padding: 0;
+    border: solid $accent;
+    width: 10fr; 
+    height: 99%;
+}
+
 #clogs {
     padding: 0;
     border: solid $accent;
