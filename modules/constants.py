@@ -21,6 +21,10 @@ LOG_INITIAL_TEXT = '''
 > Use `ESC` to cancel selection
 \n\n
 '''
+MT_INITIAL_TEXT = '''
+> Select `COM port` or `Drive` to use meshtools
+\n\n
+'''
 
 # Settings ({label text}, {cfg param})
 CFG_LOG2FILE = 'logToFile'

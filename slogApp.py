@@ -174,7 +174,7 @@ class PortSelector(App[None]):
                                                 meshO.border_title = "Mesh operations"
                                                 with ScrollableContainer(id='mesh_buttons'):
                                                     for s in meshtools.meshOptions:
-                                                        yield Button(id = f"mesh_{s.value}", label=f"{s.name}".replace("_"," "), classes="mesh_button")
+                                                        yield Button(id = f"meshOption_{s.value}", label=f"{s.name}".replace("_"," "), classes="mesh_button")
                                     with Horizontal(id="mt_logsh"):
                                         yield RichLog(id='mt_logs',highlight=True)
 
@@ -207,16 +207,24 @@ class PortSelector(App[None]):
         self.state = States.Active
         asyncio.create_task(asyncio.to_thread(self.updatePortsTh))
         self.ruller = lfilter.LabelFiller(self.config.get('labels',[]))
+
         htext = self.highlighter(constants.LOG_INITIAL_TEXT)
         htext.style = 'gray 40%'
         htext.highlight_words(await self.ruller.getKeywords(htext.plain,"`([^`]+)`"), style='green italic')
         self.logUI.write(htext)
+
         self.sm.stateInfoSubscribe(self.serialPortStateUpdate)
         # Process static labels
         self.run_worker(self.labelFilterWrapper(''))
         cfg = self.config.get('config',{})
         self.mt_logs = self.query_one('#mt_logs', RichLog)
         self.mt.setLogCallback(self.mt_logs.write)
+
+        htext = self.highlighter(constants.MT_INITIAL_TEXT)
+        htext.style = 'gray 40%'
+        htext.highlight_words(await self.ruller.getKeywords(htext.plain,"`([^`]+)`"), style='green italic')
+        self.mt.log.write(htext)
+
         '''
         if constants.CFG_SENDTO in cfg and cfg[constants.CFG_SENDTO]:
             self.bind(keys='ctrl+m' , action="sendto" , description='123')
@@ -465,6 +473,7 @@ class PortSelector(App[None]):
     @work(exclusive=True)
     async def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         self.sm.stopLoop = True
+        await self.mt.closeSerial()
         # Wait while active serial connection is stopped
         # We can check  task state or self.sm.state (currently `task`` to avoid several active tasks running)
         while self.mltask and self.mltask._state != 'FINISHED':
@@ -553,7 +562,11 @@ class PortSelector(App[None]):
                         self.write(str(e))
                         raise e
                         pass
-    
+            case x if "meshOption_" in x:
+                #All logic in meshtools module
+                await self.mt.meshOptionsFunc(x)
+
+
     async def mmhDisableExecuted(self, stepsExecuted : list = []):
         if stepsExecuted:
             for s in stepsExecuted:
