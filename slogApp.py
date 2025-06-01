@@ -20,7 +20,7 @@ from enum import Enum
 from textual import work
 from textual.containers import Container, ScrollableContainer
 from rich.highlighter import ReprHighlighter
-import asyncio, re
+import asyncio, re, requests
 
 
 default_config = {constants.CFG_LOG2FILE: True,
@@ -111,6 +111,8 @@ class PortSelector(App[None]):
         else:
             self.query_one(id).styles.width = self.query_one(id).styles.widthOld
             self.isFullscreen = False
+            for w in self.query(".mui"):
+                w.styles.visibility = 'visible'
             for w in self.query(".mui"):
                 w.styles.visibility = 'visible'
 
@@ -532,7 +534,24 @@ class PortSelector(App[None]):
 def readConfig():
     
     if not os.path.exists(constants.CONFIG_DIR):
+        # Download default configs from github to get basic settings
+        repo_url = constants.DEF_CONFIG_URL
+
+        ## Send a GET request to the GitHub API
+        response = requests.get(repo_url)
         os.makedirs(constants.CONFIG_DIR)
+        ## Iterate through the folder contents and download each file
+        for item in response.json():
+            if item["type"] == "file":
+                file_url = item["download_url"]
+                file_name = item["name"]
+                file_path = f"{constants.CONFIG_DIR}/{file_name}"
+
+                ## Download the file
+                file_response = requests.get(file_url)
+                with open(file_path, "wb") as file:
+                    file.write(file_response.content)
+
     #Read all yaml files in config folder and return them as common dictionary
 
     config_files = [f for f in os.listdir(constants.CONFIG_DIR) if f.endswith('.yaml')]
@@ -551,7 +570,6 @@ def readConfig():
 def writeConfigFile(config_dict, filename):
     with open(os.path.join(constants.CONFIG_DIR, f"{filename}.yaml"), 'w') as f:
         yaml.dump(config_dict.get(filename), f)
-    
 
 def init():
     return   

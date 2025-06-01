@@ -1,8 +1,8 @@
 from enum import Enum
 
 #App constants
-VERSION = "0.22"
-TITLE = "Meshtastic Serial Logger"
+VERSION = "0.3"
+TITLE = f"Meshtastic Serial Logger ({VERSION})"
 SUB_TITLE = "Useful serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
 LOG_FILENAME = "service.log"
@@ -10,6 +10,7 @@ LOG_DIR = "logs"
 CONFIG_DIR = "config"
 FILES_DIR = "files"
 LABELS_FILE = "labels.txt"
+DEF_CONFIG_URL = "https://api.github.com/repos/mrekin/meshlog/contents/config"
 
 #RichLog
 LOG_INITIAL_TEXT = '''
