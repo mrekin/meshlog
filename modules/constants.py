@@ -8,6 +8,7 @@ CSS_PATH = "css.tcss"
 LOG_FILENAME = "service.log"
 LOG_DIR = "logs"
 CONFIG_DIR = "config"
+NODES_CONFIG_DIR = "nodes_cfg"
 FILES_DIR = "files"
 LABELS_FILE = "labels.txt"
 DEF_CONFIG_URL = "https://api.github.com/repos/mrekin/meshlog/contents/config"
@@ -31,6 +32,8 @@ CFG_SENDTO = 'sendTo'
 CFG_BOOTLOADER_URL = 'bootloaderURL'
 CFG_FULLERASE_URL = 'fulleraseURL'
 CFG_FIRMWARE_URL = 'firmwareURL'
+CFG_AUTO_SAVE_NODE_CFG = 'autoSaveNodeCfg'
+CFG_AUTO_SAVE_NODE_KEY = 'autoSaveNodeKey'
 
 cfg_labels = {
     'logToFile': 'Log to file',

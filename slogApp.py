@@ -28,6 +28,7 @@ default_config = {constants.CFG_LOG2FILE: True,
                   constants.CFG_LOGS_BY_SESSION:False,
                   constants.CFG_AUTO_RECONNECT: True,
                   constants.CFG_BAUDRATE: 115200,
+                  constants.CFG_AUTO_SAVE_NODE_CFG: True,
                   }
 def idf(text):
     text = text.replace(' ','_')
@@ -103,18 +104,23 @@ class PortSelector(App[None]):
     
     def action_expand_log(self, id = None) -> None:
         if not self.isFullscreen:
-            self.query_one(id).styles.widthOld = self.query_one(id).styles.width
-            self.query_one(id).styles.width = '99%'
-            for w in self.query(".mui"):
+            for w in self.query(".fullScreenOn"):
+                w.styles.widthOld = w.styles.width
+                w.styles.width = '99%'
+            for w in self.query(".fullScreenOff"):
                 w.styles.visibility = 'hidden'
+            
             self.isFullscreen = True
         else:
-            self.query_one(id).styles.width = self.query_one(id).styles.widthOld
+            for w in self.query(".fullScreenOn"):
+                w.styles.width = w.styles.widthOld
             self.isFullscreen = False
-            for w in self.query(".mui"):
+            for w in self.query(".fullScreenOff"):
                 w.styles.visibility = 'visible'
             for w in self.query(".mui"):
                 w.styles.visibility = 'visible'
+
+
 
     def action_clear_log(self, id = None) -> None:
         self.logUI.clear()
@@ -131,36 +137,48 @@ class PortSelector(App[None]):
     def compose(self) -> ComposeResult:
         yield Header()
         with TabbedContent():
-                with TabPane("Serial", id="main-tab"):
+                with TabPane("Tools", id="main-tab"):
                     with Horizontal():
-                        with Vertical(id="sm_leftColumn",classes="mui leftColumn"):
-                            #self.createPortsRB()
-                            pl = RadioSet( *self.portsRB, id='portList', name='Ports list')
+                        with Vertical(id="sm_leftColumn",classes="mui fullScreenOff leftColumn"):
+                            pl = RadioSet( *self.portsRB, id='portList', name='Ports list', classes= "comports")
                             yield pl
-                            yield ScrollableContainer(*[],id="labelsContainer")
-
-                        with Vertical(id="vlogs"):
-                            self.logUI = RichLog(id='rclogs',highlight=True)
-                            yield self.logUI
-                            
-                with TabPane("MeshTools", id="meshtools-tab"):
-                        with Horizontal(id='mt_btnh', classes="mui"):
-                            with Horizontal(id='mmh_uf2', classes="") as uf2_container:
-                                uf2_container.border_title = 'UF2 boards tools'
+                            with OptionList(*self.mt.getBoardsList(),id='platformList', name='Platforms') as l:
+                                l.border_title = 'Boards types'
+                            with OptionList(id='driveList', name='Drives') as l:
+                                l.border_title = 'Drives'
+                        with Vertical(id="sm_toolsColumn",classes="fullScreenOn leftColumn"):
+                            with TabbedContent():
+                                with TabPane("Serial", id="serial-tab", classes="toolTab"):
+                                    with Horizontal() as h:
+                                        h.border_title = 'hv'
+                                        with Vertical(id="sm_labelsColumn",classes="mui1 leftColumn1") as v:
+                                            v.border_title = 'vv'
+                                            yield ScrollableContainer(*[],id="labelsContainer", classes="fullScreenOff")
+                                        with Vertical(id="vlogs", classes="fullScreenOn"):
+                                            self.logUI = RichLog(id='rclogs',highlight=True)
+                                            yield self.logUI            
                                 
-                                with Vertical(id="mt_leftColumn",classes="leftColumn"):
-                                    with OptionList(*self.mt.getBoardsList(),id='platformList', name='Platforms') as l:
-                                        l.border_title = 'Boards types'
-                                    with OptionList(id='driveList', name='Drives') as l:
-                                        l.border_title = 'Drives'
-                                with Vertical(id='buttons', classes='buttonsList'):
-                                    with Container(id='mmh_steps'):
-                                        for s in meshtools.mmhSteps:
-                                            yield Checkbox(id = f"mmh_{s.value}", label=f"{s.name}", classes="mmh_checkbox settings_element")
-                                    yield Button("Make me happy!",id = 'mmh_btn', classes='buttons', variant='primary')
-                        with Horizontal(id="mt_logsh"):
-                            yield RichLog(id='mt_logs',highlight=True)
-                            
+                                with TabPane("MeshTools", id="meshtools-tab", classes="toolTab"):
+                                    with Horizontal(id='mt_btnh', classes=""):
+                                        with Horizontal(id='mmh_uf2', classes="") as uf2_container:
+                                            uf2_container.border_title = 'UF2 boards tools'
+                                            with Vertical(id='dfuButtons', classes='buttonsList') as dfuO:
+                                                dfuO.border_title = "DFU operations"
+                                                with Container(id='mmh_steps'):
+                                                    for s in meshtools.mmhSteps:
+                                                        yield Checkbox(id = f"mmh_{s.value}", label=f"{s.name}", classes="mmh_checkbox settings_element")
+                                                yield Button("Make me happy!",id = 'mmh_btn', classes='dfuButtons', variant='primary')
+                                            with Vertical(id='meshInputs', classes='buttonsList') as meshI:
+                                                meshI.border_title = "Node connection settings"
+                                            with Vertical(id='meshButtons', classes='buttonsList') as meshO:
+                                                meshO.border_title = "Mesh operations"
+                                                with ScrollableContainer(id='mesh_buttons'):
+                                                    for s in meshtools.meshOptions:
+                                                        yield Button(id = f"mesh_{s.value}", label=f"{s.name}".replace("_"," "), classes="mesh_button")
+                                    with Horizontal(id="mt_logsh"):
+                                        yield RichLog(id='mt_logs',highlight=True)
+
+
                 with TabPane("Settings", id="settings-tab"):
                     with Container(classes="settings_tab", id = "settings"):
                         for key in self.config.get('config',{}).keys():
@@ -181,7 +199,7 @@ class PortSelector(App[None]):
                         yield Static(content = v, id="version")
                     
         yield Footer()
-    def on_mount(self):
+    async def on_mount(self):
         pass
     
     async def on_ready(self) -> None:
@@ -203,7 +221,17 @@ class PortSelector(App[None]):
         if constants.CFG_SENDTO in cfg and cfg[constants.CFG_SENDTO]:
             self.bind(keys='ctrl+m' , action="sendto" , description='123')
         '''
-        pass
+
+    
+    @on(TabbedContent.TabActivated)
+    async def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
+        """Tab activated event"""
+        msg.stop()
+        if "toolTab" in msg.pane.classes:
+            p = self.sm.port 
+            if p:
+                await self.sm.stopLoopM()
+                self.notify(f"Closing serial at: {p.device}")
     
     # Rules is a set of tuples (regexp, style) for highlighting
     async def hltext(self, text: str| ReprHighlighter, *rules):
@@ -240,7 +268,8 @@ class PortSelector(App[None]):
         try:
             try:
                 rsb = self.query_one(f"#stopRB",RadioButton)
-                rb = self.query_one(f"#{port.name}",RadioButton)
+                if port:
+                    rb = self.query_one(f"#{port.name}",RadioButton)
             except Exception as e:
                 pass
             if state == serialModule.States.Reconnecting:
@@ -250,9 +279,12 @@ class PortSelector(App[None]):
             elif state == serialModule.States.Active and rb.value == False and rsb.value == False:
                 with rb.prevent(rb.Changed):
                     rb.toggle()
-            elif state == serialModule.States.Closing and rb.value == True:
+            elif not rb:
+                rsb.toggle()            
+            elif state not in (serialModule.States.Active, serialModule.States.Reconnecting) and rb.value == True:
                 with rb.prevent(rb.Changed):
                     rb.toggle()
+
         except Exception as e:
             pass
         finally:
@@ -312,8 +344,8 @@ class PortSelector(App[None]):
     # Mount all Radiobuttons when RadioButtons list changed
     async def watch_portsRB(self):
         try:
-            pl = self.query_one("#portList")
-            if pl:
+            pls = self.query(".comports").nodes
+            for pl in pls:
                 with self.app.batch_update():
                     if len(pl.children)!=0:
                         await pl.remove_children("*")
@@ -326,13 +358,11 @@ class PortSelector(App[None]):
                     await pl.mount_all(self.portsRB)
         except:
             pass
-        if pl and len(pl.children)==0:
-            pass
-            #await self.watch_ports()    
     
     # Build Radiobuttons when port list changes
     async def watch_ports(self):
-        self.createPortsRB()    
+        self.createPortsRB()
+        self.checkPortAndSave()
     
     async def watch_driveList(self):
         dl = self.query_one("#driveList", OptionList)
@@ -409,8 +439,12 @@ class PortSelector(App[None]):
         try:
             #rsbState = self.query_one("#stopRB").value
             #Check if last pressed button was stopRB
-            rsbState = True if self.query_one("#portList").pressed_button.id =="stopRB" else False
-        except Exception as e: pass
+            pls = self.query(".comports").nodes
+            for pl in pls:
+                rsbState = True if pl.pressed_button.id =="stopRB" else False
+            #rsbState = True if self.query_one("#portList").pressed_button.id =="stopRB" else False
+        except Exception as e:
+            pass
         if self.ports:
             arr =[RadioButton(t,tooltip=self.ports[i].description, id=self.ports[i].name) for i, t in enumerate(self.ps)]
         if self.sm.port and self.sm.port not in self.ports and self.sm.state == serialModule.States.Reconnecting:
@@ -446,9 +480,17 @@ class PortSelector(App[None]):
                 indx= self.ps.index(event.pressed.label.plain)
                 port = self.ports[indx]
                 self.updateLogger(port = port.device)
+                # Get active toolTab
+                pane = [p for p in self.query(".toolTab") if p.display == True]
+                pane = pane[0] if pane else None
+                
                 # Preventing multiple tasks with serial 
                 if not self.mltask or self.mltask._state == 'FINISHED':
-                    self.mltask = asyncio.create_task(asyncio.to_thread(self.runSerial,port))
+                    if pane.id == 'serial-tab':
+                        self.mltask = asyncio.create_task(asyncio.to_thread(self.runSerial,port))
+                    if pane.id == 'meshtools-tab':
+                        #Connect to serial as meshtastic client
+                        await self.mt.openSerial(port)
             except Exception as e:
                 pass
         else:
@@ -529,6 +571,29 @@ class PortSelector(App[None]):
             if p.name == name:
                 return p
         return None
+    
+    '''
+    Check port pid in config
+    if found - try to connect by meshtools and get key and cfg (if config params is true)
+    '''
+    @work(exclusive=True, thread=True)
+    async def checkPortAndSave(self):
+        #Autosave only if MeshTab active
+        try:
+            tab = self.query_one("#meshtools-tab", TabPane)
+        except Exception as e:
+            return
+        if self.query_one("#meshtools-tab", TabPane).is_on_screen:
+            #Autosave only if cfg parameter is true
+            if self.config.get('config').get(constants.CFG_AUTO_SAVE_NODE_CFG,False):
+                #Exclude already opened/reconnecting port 
+                if self.sm.state in (serialModule.States.Active, serialModule.States.Reconnecting):
+                    ports = [p for p in self.ports if p != self.sm.port]
+                else:
+                    ports = self.ports
+                await self.mt.autoSaveCFG(ports)
+
+        
         
 
 def readConfig():

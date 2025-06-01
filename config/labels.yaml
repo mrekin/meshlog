@@ -53,3 +53,10 @@
   regexp: 'Packet TX: (\d+)ms'
   maxIterations: 20
   ndigits: 0
+
+- name: IP
+  type: str
+  regexp: 'Obtained IP address: ([\.\d]+)$'
+  rules: 
+      - type: firstEntrance
+        dropAfter: (Opening port|Init NodeDB)
