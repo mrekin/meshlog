@@ -13,6 +13,7 @@ I need a tool to simplify meshtastic nodes log analisys. I didn't found anything
 ![v0.11 screen](images/screen.png)
 
 ## HowTo
+!! Windows defender may mark .exe (nuitka build)  as malicious. So mark it as 'safe' or use python version.. (https://github.com/Nuitka/Nuitka/issues/2805)
 
 ### Installation 
 Linux
@@ -79,11 +80,11 @@ python3 ./slogApp.py
 - [x] Github releases (v0.12)
 - [ ] Readme updates (installation/usage/etc)
 ## ToDo (far future)
-- [ ] Use Meshtastic library
+- [x] Use Meshtastic library
   - [ ] Use not only serial connection, but IP/Bluetooth
   - [ ] Get/upload node config
   - [ ] Get node status
-  - [ ] Trigger DFU mode
+  - [x] Trigger DFU mode (v0.3)
   - [ ] (?) Trigger reboot/nodeinfo send/etc
 - [x] NRF52 flashing
   - [x] Upload fullerase uf2
