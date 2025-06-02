@@ -12,14 +12,21 @@ import pyrfc6266
 import yaml
 
 class Log(object):
-    def write(self, text):
+    def write(self, text, json = False):
+        #TODO do something for JSON highlighting (but i don't want to do it here)
+        self.writeCallBack(text)
         pass
+    
+    def writeCallBack(self, text):
+        pass
+
 
 class mmhSteps(Enum):
     UPDATE_BOOTLOADER = 0
     FULL_ERASE = 1
     UPDATE_FIRMWARE = 2
     OPEN_CONSOLE = 3
+
 
 class meshOptions(Enum):
     SAVE_NODE_CFG = 0
@@ -45,8 +52,33 @@ class MeshTools:
     def getBoardsList(self):
         return [b.get('name', None) for b in self.boards]
     
+    async def logPlatformConfig(self, platform):
+        if platform:
+            self.log.write("Board config:")
+            cfg = self.boards[self.getBoardsList().index(platform)]
+            self.log.write(cfg, json = True)
+        pass
+    
+    # Method returns available mmhSteps for selected platform, based on platform config in boards. Each step available if correspobding config variable is set
+    async def getAvailableMmhSteps(self, platform):
+        steps = []
+        steps.append(mmhSteps.OPEN_CONSOLE) # Always available
+        for pl in self.boards:
+            if pl.get('name',None) == platform:                
+                for step in mmhSteps:
+                    if step == mmhSteps.UPDATE_BOOTLOADER and pl.get('bootloaderURL',None):
+                        steps.append(step)
+                    elif step == mmhSteps.FULL_ERASE and pl.get('fulleraseURL',None):
+                        steps.append(step)
+                    elif step == mmhSteps.UPDATE_FIRMWARE and (pl.get('firmwareURL',None) or 
+                                                            (pl.get('availableFirmwareURL',None) and pl.get('baseFirmwareURL',None))):
+                        steps.append(step)
+                break
+        return steps
+
+
     def setLogCallback(self, log_callback):
-        self.log.write = log_callback
+        self.log.writeCallBack = log_callback
     # method for listing all mouned drives on the system indepedent of os type
     def listDrives(self):
         drives = psutil.disk_partitions()

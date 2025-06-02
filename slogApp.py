@@ -29,6 +29,7 @@ default_config = {constants.CFG_LOG2FILE: True,
                   constants.CFG_AUTO_RECONNECT: True,
                   constants.CFG_BAUDRATE: 115200,
                   constants.CFG_AUTO_SAVE_NODE_CFG: True,
+                  constants.CFG_LOG_BOARD_CFG: False
                   }
 def idf(text):
     text = text.replace(' ','_')
@@ -140,12 +141,13 @@ class PortSelector(App[None]):
                 with TabPane("Tools", id="main-tab"):
                     with Horizontal():
                         with Vertical(id="sm_leftColumn",classes="mui fullScreenOff leftColumn"):
-                            pl = RadioSet( *self.portsRB, id='portList', name='Ports list', classes= "comports")
-                            yield pl
-                            with OptionList(*self.mt.getBoardsList(),id='platformList', name='Platforms') as l:
-                                l.border_title = 'Boards types'
-                            with OptionList(id='driveList', name='Drives') as l:
+                            with RadioSet( *self.portsRB, id='portList', name='Ports list', classes= "comports") as pl:
+                                pl.border_title = 'COM ports'
+                            with OptionList("111",id='driveList', name='Drives') as l:
                                 l.border_title = 'Drives'
+                            with OptionList(*self.mt.getBoardsList(),id='platformList', name='Platforms') as l:
+                                l.border_title = 'Boards types'                                
+
                         with Vertical(id="sm_toolsColumn",classes="fullScreenOn leftColumn"):
                             with TabbedContent():
                                 with TabPane("Serial", id="serial-tab", classes="toolTab"):
@@ -218,6 +220,7 @@ class PortSelector(App[None]):
         self.run_worker(self.labelFilterWrapper(''))
         cfg = self.config.get('config',{})
         self.mt_logs = self.query_one('#mt_logs', RichLog)
+
         self.mt.setLogCallback(self.mt_logs.write)
 
         htext = self.highlighter(constants.MT_INITIAL_TEXT)
@@ -384,6 +387,11 @@ class PortSelector(App[None]):
                         dl.remove_option_at_index(i)
                 droptions = [Option(d.device) for d in self.driveList]
                 dl.add_options(droptions)
+                # Hot fix while Textual bug not fixed in release https://github.com/Textualize/textual/pull/5795
+                # TODO test and remove this on next Textual version bump.
+                dl.refresh(layout=True)
+
+                pass
             # CHeck if drive has CURRENT.UF2 file
             for d in self.driveList:
                 forceUpdateBootloader = False
@@ -468,7 +476,27 @@ class PortSelector(App[None]):
     @work(exclusive=True) 
     async def on_radio_button_changed(self, event: RadioButton.Changed) -> None:
         pass
-     
+
+    async def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        # Get selected platform(board type) and disable all steps which not available for this platform, using getAvailableMmhSteps method
+        if (self.getCurrentToolPane().id == 'meshtools-tab' 
+                        and event.option_list.id in ('platformList','driveList')
+                        and self.query_one('#platformList', OptionList).highlighted):
+            
+            platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
+            avSteps = await self.mt.getAvailableMmhSteps(platform)
+            avSteps = [f"mmh_{x.value}" for x in avSteps]
+            checkBoxes = self.query('.mmh_checkbox').nodes
+            for chb in checkBoxes:
+                if chb.id not in avSteps:
+                    chb.disabled = True
+                else:
+                    chb.disabled = False
+    async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        if self.config.get('config',{}).get(constants.CFG_LOG_BOARD_CFG, False) and self.getCurrentToolPane().id == 'meshtools-tab' and event.option_list.id in ('platformList'):
+            platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
+            await self.mt.logPlatformConfig(platform= platform)
+    
     mltask = None   
     @work(exclusive=True)
     async def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
@@ -490,8 +518,7 @@ class PortSelector(App[None]):
                 port = self.ports[indx]
                 self.updateLogger(port = port.device)
                 # Get active toolTab
-                pane = [p for p in self.query(".toolTab") if p.display == True]
-                pane = pane[0] if pane else None
+                pane = self.getCurrentToolPane()
                 
                 # Preventing multiple tasks with serial 
                 if not self.mltask or self.mltask._state == 'FINISHED':
@@ -505,6 +532,11 @@ class PortSelector(App[None]):
         else:
             pass
     
+    def getCurrentToolPane(self):
+        pane = [p for p in self.query(".toolTab") if p.display == True]
+        pane = pane[0] if pane else None
+        return pane
+
     def runSerial(self, port):
         self.sm.mainLoop(port, int(self.config.get('config').get(constants.CFG_BAUDRATE,115200)), bool(self.config.get('config').get(constants.CFG_AUTO_RECONNECT,False)), waitNewPort=False)
 

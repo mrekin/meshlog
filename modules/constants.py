@@ -1,7 +1,7 @@
 from enum import Enum
 
 #App constants
-VERSION = "0.3"
+VERSION = "0.31"
 TITLE = f"Meshtastic Serial Logger ({VERSION})"
 SUB_TITLE = "Useful serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
@@ -23,7 +23,7 @@ LOG_INITIAL_TEXT = '''
 '''
 MT_INITIAL_TEXT = '''
 > Select `COM port` or `Drive` to use meshtools
-\n\n
+> Be carefull while selecting your board type and firmware files!
 '''
 
 # Settings ({label text}, {cfg param})
@@ -38,6 +38,7 @@ CFG_FULLERASE_URL = 'fulleraseURL'
 CFG_FIRMWARE_URL = 'firmwareURL'
 CFG_AUTO_SAVE_NODE_CFG = 'autoSaveNodeCfg'
 CFG_AUTO_SAVE_NODE_KEY = 'autoSaveNodeKey'
+CFG_LOG_BOARD_CFG= 'logBoardCfg'
 
 cfg_labels = {
     'logToFile': 'Log to file',
