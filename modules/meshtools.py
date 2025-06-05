@@ -62,20 +62,42 @@ class MeshTools:
     # Method returns available mmhSteps for selected platform, based on platform config in boards. Each step available if correspobding config variable is set
     async def getAvailableMmhSteps(self, platform):
         steps = []
+        fwSelect = False
         steps.append(mmhSteps.OPEN_CONSOLE) # Always available
         for pl in self.boards:
             if pl.get('name',None) == platform:                
-                for step in mmhSteps:
-                    if step == mmhSteps.UPDATE_BOOTLOADER and pl.get('bootloaderURL',None):
-                        steps.append(step)
-                    elif step == mmhSteps.FULL_ERASE and pl.get('fulleraseURL',None):
-                        steps.append(step)
-                    elif step == mmhSteps.UPDATE_FIRMWARE and (pl.get('firmwareURL',None) or 
-                                                            (pl.get('availableFirmwareURL',None) and pl.get('baseFirmwareURL',None))):
-                        steps.append(step)
-                break
-        return steps
+                    if pl.get('bootloaderURL',None):
+                        steps.append(mmhSteps.UPDATE_BOOTLOADER)
+                    if pl.get('fulleraseURL',None):
+                        steps.append(mmhSteps.FULL_ERASE)
+                    if pl.get('firmwareURL',None) or (pl.get('availableFirmwaresURL',None) and pl.get('baseFirmwareURL',None)):
+                        steps.append(mmhSteps.UPDATE_FIRMWARE)
+                        if pl.get('availableFirmwaresURL',None) and pl.get('baseFirmwareURL',None):
+                            fwSelect = True
+                    break
+        return steps, fwSelect
 
+    async def getFirmwares(self,platform):
+        if platform:
+            for pl in self.boards:
+                if pl.get('name',None) == platform:  
+                    versions = pl.get('versions',None)
+                    if not versions:
+                        if pl.get('availableFirmwaresURL',None) and pl.get('baseFirmwareURL',None):
+                            self.log.write("Requesting firmware versions...")
+                            # Make GET request to availableFirmwareURL and get 'versions' from responce
+                            # Parse response and get firmware versions
+                            try:
+                                with requests.get(pl.get('availableFirmwaresURL')) as r:
+                                    if r.status_code == 200:
+                                        versions = r.json().get('versions',[])
+                                        pl['versions'] = versions
+                            except Exception as e:
+                                self.log.write(f"Error: {e}.")
+                                self.log.write(f"Please try to select platform again")
+                    return versions
+                break
+        return []
 
     def setLogCallback(self, log_callback):
         self.log.writeCallBack = log_callback
@@ -126,7 +148,7 @@ class MeshTools:
             
     # method checks if file exist. If no - download it
     # then copy file to given path
-    def copyFile(self, url= None, targetFolder = None, filename = None, type = None, platform: int = None):
+    def copyFile(self, url= None, targetFolder = None, filename = None, type = None, platform: int = None, vars: dict = {}):
         if not url:
             match type:
                 case 'bootloader':
@@ -147,7 +169,10 @@ class MeshTools:
                         filename = os.path.basename(parsed_url.path)
                         
                 case 'firmware':
-                    url = self.boards[self.getBoardsList().index(platform)].get(constants.CFG_FIRMWARE_URL,None)
+                    if not vars.get('version',None):
+                        url = self.boards[self.getBoardsList().index(platform)].get(constants.CFG_FIRMWARE_URL,None)
+                    else:
+                        url = self.boards[self.getBoardsList().index(platform)].get(constants.CFG_BASE_FW_URL,None).format(**vars)
                     if not url:
                         self.log.write(f"Firmware url is not set in config ({platform})")
                         return
@@ -186,7 +211,7 @@ class MeshTools:
 
         return dfuDrive, uf2Info
     
-    async def execMmhSteps(self, platform = None, targetFolder = None, steps= [], sm: serialModule.SerialModule  = None):
+    async def execMmhSteps(self, platform = None, targetFolder = None, steps= [], sm: serialModule.SerialModule  = None, vars: dict = {}):
         stepsExecuted = []
         ports = sm.get_available_ports()[0]
         if mmhSteps.UPDATE_BOOTLOADER.name in steps:
@@ -244,7 +269,8 @@ class MeshTools:
             self.log.write("Downloading firmware file...")
             self.copyFile(type = 'firmware', 
                                 platform = platform,
-                                targetFolder= targetFolder
+                                targetFolder= targetFolder,
+                                vars =vars
                                 )   
             self.log.write("Done")
             stepsExecuted.append(mmhSteps.UPDATE_FIRMWARE.name) 

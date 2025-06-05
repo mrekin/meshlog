@@ -1,7 +1,7 @@
 from enum import Enum
 
 #App constants
-VERSION = "0.31"
+VERSION = "0.4"
 TITLE = f"Meshtastic Serial Logger ({VERSION})"
 SUB_TITLE = "Useful serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
@@ -39,6 +39,9 @@ CFG_FIRMWARE_URL = 'firmwareURL'
 CFG_AUTO_SAVE_NODE_CFG = 'autoSaveNodeCfg'
 CFG_AUTO_SAVE_NODE_KEY = 'autoSaveNodeKey'
 CFG_LOG_BOARD_CFG= 'logBoardCfg'
+CFG_BASE_FW_URL ='baseFirmwareURL'
+CFG_AVAILABLE_FW_URL = 'availableFirmwaresURL'
+
 
 cfg_labels = {
     'logToFile': 'Log to file',

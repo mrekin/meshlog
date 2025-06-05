@@ -1,11 +1,11 @@
 from textual import on
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, RadioSet, RadioButton, Input, RichLog, TextArea, Checkbox, Label
+from textual.widgets import Header, Footer, RadioSet, RadioButton, Input, RichLog, TextArea, Checkbox, Label, Select
 from textual.widgets import TabbedContent, TabPane, Static, OptionList, Button
 from textual.widgets.option_list import Option
 from textual.widget import Widget
 from textual.reactive import reactive
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.binding import Binding
 #from textual.events import Blur
 import modules.serialModule as serialModule
@@ -161,18 +161,19 @@ class PortSelector(App[None]):
                                             yield self.logUI            
                                 
                                 with TabPane("MeshTools", id="meshtools-tab", classes="toolTab"):
-                                    with Horizontal(id='mt_btnh', classes=""):
-                                        with Horizontal(id='mmh_uf2', classes="") as uf2_container:
+                                    #with Horizontal(id='mt_btnh', classes="mui"):
+                                    with Horizontal(id='mmh_uf2', classes="mui") as uf2_container:
                                             uf2_container.border_title = 'UF2 boards tools'
-                                            with Vertical(id='dfuButtons', classes='buttonsList') as dfuO:
+                                            with VerticalScroll(id='dfuButtons', classes='buttonsList mui w1') as dfuO:
                                                 dfuO.border_title = "DFU operations"
-                                                with Container(id='mmh_steps'):
+                                                with ScrollableContainer(id='mmh_steps', classes="mui"):
                                                     for s in meshtools.mmhSteps:
-                                                        yield Checkbox(id = f"mmh_{s.value}", label=f"{s.name}", classes="mmh_checkbox settings_element")
-                                                yield Button("Make me happy!",id = 'mmh_btn', classes='dfuButtons', variant='primary')
-                                            with Vertical(id='meshInputs', classes='buttonsList') as meshI:
+                                                        with Horizontal(id = f"mmhor_{s.value}", classes="mmhorisontal"):
+                                                            yield Checkbox(id = f"mmh_{s.value}", label=f"{s.name}", classes="mmh_checkbox settings_element")
+                                                yield Button("Make me happy!",id = 'mmh_btn', classes='dfuButtons1 mesh_button', variant='primary')
+                                            with Vertical(id='meshInputs', classes='buttonsList w1') as meshI:
                                                 meshI.border_title = "Node connection settings"
-                                            with Vertical(id='meshButtons', classes='buttonsList') as meshO:
+                                            with Vertical(id='meshButtons', classes='buttonsList w05') as meshO:
                                                 meshO.border_title = "Mesh operations"
                                                 with ScrollableContainer(id='mesh_buttons'):
                                                     for s in meshtools.meshOptions:
@@ -477,21 +478,48 @@ class PortSelector(App[None]):
     async def on_radio_button_changed(self, event: RadioButton.Changed) -> None:
         pass
 
+    @work(exclusive=True)
     async def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
         # Get selected platform(board type) and disable all steps which not available for this platform, using getAvailableMmhSteps method
         if (self.getCurrentToolPane().id == 'meshtools-tab' 
                         and event.option_list.id in ('platformList','driveList')
-                        and self.query_one('#platformList', OptionList).highlighted):
+                        and self.query_one('#platformList', OptionList).highlighted != None):
             
             platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
-            avSteps = await self.mt.getAvailableMmhSteps(platform)
+            avSteps, fwSelect = await self.mt.getAvailableMmhSteps(platform)
             avSteps = [f"mmh_{x.value}" for x in avSteps]
             checkBoxes = self.query('.mmh_checkbox').nodes
             for chb in checkBoxes:
                 if chb.id not in avSteps:
                     chb.disabled = True
+                    chb.value = False
                 else:
                     chb.disabled = False
+            if fwSelect:
+                h= None
+                s= None
+                try:
+                    h = self.query_one(f"#mmhor_{meshtools.mmhSteps.UPDATE_FIRMWARE.value}", Horizontal)
+                    s = self.query_one(f"#fwSelect")
+                except Exception as e:
+                    pass
+                v = await self.mt.getFirmwares(platform)
+                if len(v)>0:
+                    if not s:
+                        s = Select([ (x,x) for x in v], id='fwSelect', prompt='Select..', allow_blank=True , value= v[0])
+                        h.mount(s)
+                    else:                    
+                        s.set_options( [(x,x) for x in v] )
+                        s.value = v[0]
+            else:
+                s= None
+                try:
+                    s = self.query_one(f"#fwSelect")
+                    s.remove()
+                except Exception as e:
+                    pass
+                
+
     async def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         if self.config.get('config',{}).get(constants.CFG_LOG_BOARD_CFG, False) and self.getCurrentToolPane().id == 'meshtools-tab' and event.option_list.id in ('platformList'):
             platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
@@ -576,6 +604,9 @@ class PortSelector(App[None]):
                                 )
 
             case 'mmh_btn':
+                vars = {
+                    'version': None,
+                }
                 if self.query_one('#platformList', OptionList).highlighted != None:
                     platform = self.mt.getBoardsList()[self.query_one('#platformList', OptionList).highlighted]
                 else: return
@@ -583,8 +614,9 @@ class PortSelector(App[None]):
                 if platform != None and driveN != None:
                     targetFolder = self.driveList[driveN].mountpoint
                     steps = [ s.name for s in meshtools.mmhSteps if self.query_one(f"#mmh_{s.value}").value == True ]
+                    vars['version'] = await self.getSelectedVersion()
                     try:
-                        stepsExecuted = await self.mt.execMmhSteps(platform=platform, targetFolder=targetFolder, steps= steps ,sm = self.sm)
+                        stepsExecuted = await self.mt.execMmhSteps(platform=platform, targetFolder=targetFolder, steps= steps ,sm = self.sm, vars = vars)
                         await self.mmhDisableExecuted(stepsExecuted = stepsExecuted)
                         if meshtools.mmhSteps.OPEN_CONSOLE.name in stepsExecuted:
                             self.logUI.focus()
@@ -598,6 +630,13 @@ class PortSelector(App[None]):
                 #All logic in meshtools module
                 await self.mt.meshOptionsFunc(x)
 
+    # Method returns value of Select widget if exists, None otherwise
+    async def getSelectedVersion(self):
+        try:
+            s = self.query_one(f"#fwSelect")
+            return s.value
+        except Exception as e:
+            return None
 
     async def mmhDisableExecuted(self, stepsExecuted : list = []):
         if stepsExecuted:

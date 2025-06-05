@@ -20,6 +20,12 @@ Screen {
 #sm_leftColumn, #sm_labelsColumn {
     width: 2.3fr;
 }
+.mmhorisontal {
+    height: auto;
+    margin: 0;
+    padding: 0;
+}
+
 #mt_leftColumn {
     width: 3fr;
 }
@@ -36,12 +42,23 @@ Screen {
 .mesh_button {
    margin: 1 1;  
    height: 1.25;
-   width: 1fr;
+   width: 0.5fr;
    border: none;
+}
+
+#fwSelect {
+    /*height: 1.25;*/
 }
 
 .mui {
    border: solid $secondary; 
+}
+.w05 {
+    width: 0.5fr;
+}
+
+.w1 {
+    width: 1fr;
 }
 
 #settings-tab {
@@ -122,6 +139,6 @@ Lbl{
     height: 1fr;
 }
 
-#mmh_steps {
-    height: auto
+#mmh_steps1 {
+    height: 5fr
 }
