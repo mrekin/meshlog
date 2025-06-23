@@ -342,16 +342,14 @@ class PortSelector(App[None]):
         path =pathlib.Path(constants.LOG_DIR, f"{fprefix}.{fname}" if fprefix else fname)
         #currentLogName = f"{fprefix}.{fname}" if fprefix else fname
         currentLogName = path.as_posix()
-        if self.lastLogName != currentLogName:
-            self.logger.removeFileHandlers()
-            self.fileHandler = None
+        if self.lastLogName == currentLogName:
+            return
+        self.logger.removeFileHandlers()
+        self.fileHandler = None
+        self.lastLogName = None
         if constants.CFG_LOG2FILE in cfg and cfg.get(constants.CFG_LOG2FILE, False):
                 self.fileHandler = self.logger.addFileHandler(currentLogName, encoding='utf-8')
                 self.lastLogName = currentLogName
-        elif self.fileHandler:
-            self.logger.removeFileHandlers()
-            self.fileHandler = None
-            self.lastLogName = None
         
     # Mount all Radiobuttons when RadioButtons list changed
     async def watch_portsRB(self):
