@@ -9,3 +9,4 @@ scripts/slogApp.spec
 labels.txt
 files/
 nodes_cfg/
+scripts/nuitka-crash-report.xml

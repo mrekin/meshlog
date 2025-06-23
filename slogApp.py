@@ -506,9 +506,13 @@ class PortSelector(App[None]):
                     if not s:
                         s = Select([ (x,x) for x in v], id='fwSelect', prompt='Select..', allow_blank=True , value= v[0])
                         h.mount(s)
-                    else:                    
+                    else:
+                        curv = await self.getSelectedVersion()
                         s.set_options( [(x,x) for x in v] )
-                        s.value = v[0]
+                        if curv not in v: 
+                            s.value = v[0]
+                        else:
+                            s.value = curv
             else:
                 s= None
                 try:
