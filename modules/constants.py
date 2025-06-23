@@ -1,7 +1,7 @@
 from enum import Enum
 
 #App constants
-VERSION = "0.4"
+VERSION = "0.41"
 TITLE = f"Meshtastic Serial Logger ({VERSION})"
 SUB_TITLE = "Useful serial monitor with small extentions for meshtastic logs"
 CSS_PATH = "css.tcss"
