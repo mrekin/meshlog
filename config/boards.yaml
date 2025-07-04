@@ -1,18 +1,22 @@
+# trunk-ignore-all(prettier)
 # Name is boardID from the UF2.TXT file (for UF2 devices)
 # You can customize URLs to point to your own files if you want to
 - name: nRF52840-nicenano
   # URL for update bootloader file (UF2)
-  bootloaderURL: https://github.com/adafruit/Adafruit_nRF52_Bootloader/releases/download/0.9.2/update-nice_nano_bootloader-0.9.2_nosd.uf2
+  # Adafruit promicro bootloader
+  #bootloaderURL: https://github.com/adafruit/Adafruit_nRF52_Bootloader/releases/download/0.9.2/update-nice_nano_bootloader-0.9.2_nosd.uf2
+  #promicro bootloader with ota fix
+  bootloaderURL: https://github.com/oltaco/Adafruit_nRF52_Bootloader_OTAFIX/releases/download/0.9.2-otafix1/update-promicro_nrf52840_bootloader-0.9.2-otafix1_nosd.uf2
   #URL for full erase file (UF2)
   fulleraseURL: https://flasher.meshtastic.org/uf2/nrf_erase2.uf2
-  #URL for firmware file (UF2) 
+  #URL for firmware file (UF2)
   # Will not be used while availableFirmwaresURL and baseFirmwareURL are defined.
-  firmwareURL: https://mrekin.duckdns.org/flasher/api/firmware?t=nrf52_promicro_diy_tcxo&u=1&e=false 
-  # URL for available firmwares list (JSON) 
+  firmwareURL: https://mrekin.duckdns.org/flasher/api/firmware?t=nrf52_promicro_diy_tcxo&u=1&e=false
+  # URL for available firmwares list (JSON)
   availableFirmwaresURL: https://mrekin.duckdns.org/flasher/api/versions?t=nrf52_promicro_diy_tcxo
   # Base URL for firmware file (UF2) with variable: {version}
   baseFirmwareURL: https://mrekin.duckdns.org/flasher/api/firmware?v={version}&t=nrf52_promicro_diy_tcxo&u=1&e=false
 
 - name: RPI-RP2
-  # URL for full erase file (UF2) 
+  # URL for full erase file (UF2)
   fulleraseURL: https://flasher.meshtastic.org/uf2/pico_erase.uf2
