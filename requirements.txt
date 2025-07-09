@@ -1,7 +1,7 @@
 pyserial==3.5
 textual==3.5.0
 PyYAML==6.0.2
-meshtastic==2.6.3
+meshtastic==2.6.4
 psutil==7.0.0
 pyrfc6266 == 1.0.2
 imageio == 2.37.0
